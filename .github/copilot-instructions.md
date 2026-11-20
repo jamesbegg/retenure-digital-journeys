@@ -15,7 +15,7 @@ Never run deploy, DNS or certificate commands unless the user's current request 
 - **App**: Angular 22 on Node 24 (`.nvmrc`), standalone components, signals for local state, typed reactive forms for every control, lazy-loaded routes by journey. No NgRx without an ADR.
 - **Tests**: Vitest through `ng test` with Testing Library for specs, `node --test` for `tools/` guards, Playwright with axe for e2e.
 - **Styling**: SCSS with design tokens exposed as CSS custom properties. The tenant theme sets the brand tokens at runtime; components read tokens and never hold brand values.
-- **Shared UI**: the components in `src/app/ui/` are the only building blocks a journey screen uses. They are written to move into a shared package (`@retenure/ui`) that the adviser studio also consumes for previews, so they import nothing from journeys, routes or services.
+- **Shared UI**: the `@retenure/ui` library in `projects/ui` holds the only building blocks a journey screen uses. The adviser studio consumes the same package for previews, so it imports nothing from the app.
 - **Backend**: `my-wealth-backend` owns tenants, journeys, question sets, answers and client verification. This app holds no business rules that decide what to ask; it renders what the questions engine returns.
 - **Hosting**: one deployment serves every firm. The firm is resolved from the hostname (`<firm>.retenure.io`, or a firm's own domain that points a CNAME at the shared custom-domain target). There is no per-firm build.
 
@@ -30,12 +30,19 @@ Never run deploy, DNS or certificate commands unless the user's current request 
 
 ## 2) Project structure
 
-- `src/app/ui/`: shared components, one folder each (`button/`, `radio-group/`), with spec and story. No feature imports.
+- `projects/ui/src/lib/`: the `@retenure/ui` library, in layers. A layer imports its own layer or a lower one, never a higher one:
+  - `tokens/`: CSS custom properties (neutral, light and dark, brand slots) and SCSS mixins. The only place a raw colour may appear.
+  - `interfaces/` and `utils/`: types and small shared helpers.
+  - `primitives/`: Icon, Button, TextField, YesNo, RadioGroup, CheckboxGroup, Select, Toggle, Badge, CodeInput.
+  - `composites/`: Card, ActionBar, Notice, Steps, ProgressBar, FactCard, ConfirmItem, QuestionCard, AdviserContact, ClientHeader.
+  - `layouts/`: JourneyShell.
+- Each component folder holds `<name>.ts`, `.html`, `.scss`, `.spec.ts` and `.story.ts`. The story declares `Variants<Component>` and is registered in `projects/ui/src/stories.ts`, which the dev-only gallery (`/gallery`) renders.
+- `projects/ui/src/public-api.ts`: the package's only entry. Journeys import `@retenure/ui`, never a deep path.
+- `projects/ui/src/styles/`: global styles built once: reset, base typography, the focus ring, `.ret-visually-hidden`.
 - `src/app/tenant/`: hostname resolution, theme application, tenant-scoped HTTP interceptor.
 - `src/app/journeys/<journey>/`: one lazy route per journey. Screens compose `ui/` components and the journey renderer.
 - `src/app/engine/`: the client-side journey renderer that maps a question definition to a component. It does not decide which questions to ask.
-- `src/app/models/`: exported types for tenants, journeys, questions and answers. Do not export interfaces from components or services.
-- `src/styles/`: tokens, typography scale, reset. The only place a raw colour or size value may appear.
+- `src/app/interfaces/` and `projects/ui/src/lib/interfaces/`: every type. No `interface`, `type` or inline object type outside an `interfaces/` folder.
 
 ## 3) KISS and types
 

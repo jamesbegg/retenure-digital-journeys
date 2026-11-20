@@ -161,6 +161,13 @@ Each rule pairs with what enforces it. When the user corrects an agent, fix the 
 | No inline `eslint-disable` or `stylelint-disable`. A rule that needs an exception changes in config, with a reason. | ESLint `noInlineConfig`, stylelint `ignoreDisables` |
 | Journey SCSS sets layout only (`display`, `grid*`, `flex*`, `gap`, `margin*`, `order`): no colour, border, font, radius, shadow, custom property, `::ng-deep`, mixin or import. | stylelint override for `src/app/journeys/**/*.scss` |
 | Every type (`interface`, `type`, `enum`, inline object type) lives in an `interfaces/` folder. | ESLint `no-restricted-syntax` (specs excepted) |
+| UI layers in `projects/ui/src/lib`: `interfaces` and `utils`, then `primitives`, `composites`, `layouts`. A layer imports its own layer or a lower one, never a higher one. No import cycles. No file outside a known layer. | `boundaries/dependencies`, `boundaries/no-unknown-files`, `import-x/no-cycle` |
+| `projects/ui` imports nothing from `src/app` and never imports itself by package name. | ESLint `no-restricted-imports` on `projects/ui` |
+| App code imports UI only from `@retenure/ui`, never a deep path. Only the gallery imports `@retenure/ui/stories`. | ESLint `no-restricted-imports` on `src/app` |
+| Every component folder has `<name>.spec.ts` and `<name>.story.ts`. The story declares `Variants<Component>` and is registered in `projects/ui/src/stories.ts`. | `tools/check-ui-files.mjs` in `npm run lint` |
+| A story lists every value of every literal-union input, every `kind` and every boolean input. | the `Variants<C>` type, run by `npm run typecheck`; proven by `@ts-expect-error` lines in `interfaces/story.spec.ts` |
+| Inputs named `variant`, `size`, `tone`, `state`, `kind`, `type`, `layout`, `branding` or `*Position` take a literal-union type argument, never `string`. Signals only: no `@Input` or `@Output`. | ESLint `no-restricted-syntax` |
+| The production build contains no gallery and no synthetic firm or household name. | `fileReplacements` for `src/app/dev-routes.ts`; `tools/check-dist.mjs` in `npm run build` |
 | Components take content through inputs. No firm name, journey name, client name or screen-specific copy inside a shared component. | judgment; planned: lint check for hard-coded copy in `ui/` templates |
 | No firm branding outside the tenant theme: no colour literal, logo path or firm name in components or screens. | stylelint `color-no-hex`, `color-named` and `function-disallowed-list` outside `projects/ui/src/lib/tokens`; logo paths and firm names are judgment |
 | Every tenant-scoped request, cache key and stored draft includes the tenant id. | planned (#3): HTTP interceptor spec; `e2e/tenancy.spec.ts` exists with both synthetic firms and is `fixme` until branding lands |
@@ -172,7 +179,7 @@ Each rule pairs with what enforces it. When the user corrects an agent, fix the 
 | Component and directive selectors use the `ret` prefix. | `@angular-eslint/component-selector`, `@angular-eslint/directive-selector` |
 | No `any` outside specs. | `@typescript-eslint/no-explicit-any` |
 | Write "adviser", not "advisor", in copy and new identifiers. | judgment |
-| Every lint, stylelint and template check above fails on a bad example and passes on the fix. | `tools/guards.test.mjs` in `npm test` |
+| Every lint, stylelint and script check above fails on a bad example and passes on the fix. | `tools/guards.test.mjs`, `tools/ui-guards.test.mjs` in `npm test` |
 | One primary action per screen. Confirm, Save or Continue is the right-hand button. | judgment (`journey-ux.instructions.md`) |
 | Two options use YesNo. Three or more use the card RadioGroup. | judgment (`journey-ux.instructions.md`) |
 | KISS: build the simplest version that meets the contract, with no extra tier, flag, guard, abstraction or machinery the contract did not ask for. Read the diff for anything removable and remove it. | judgment, with the KISS pass in `verify-change` and the `implementer` and `reviewer` roles |

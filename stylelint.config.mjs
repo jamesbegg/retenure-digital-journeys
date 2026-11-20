@@ -2,8 +2,10 @@ const tokensOnly = 'Colours live in projects/ui/src/lib/tokens. Use a var(--ret-
 
 export default {
   ignoreDisables: true,
+  ignoreFiles: ['dist/**', 'out-tsc/**', '.angular/**', 'playwright-report/**'],
   extends: ['stylelint-config-standard-scss'],
   rules: {
+    'custom-property-empty-line-before': null,
     'color-no-hex': [true, { message: tokensOnly }],
     'color-named': ['never', { message: tokensOnly }],
     'function-disallowed-list': [

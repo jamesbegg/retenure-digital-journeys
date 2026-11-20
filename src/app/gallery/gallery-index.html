@@ -1,0 +1,14 @@
+<main>
+  <h1>Stories</h1>
+  @if (names.length) {
+    <ul>
+      @for (name of names; track name) {
+        <li>
+          <a [routerLink]="name">{{ name }}</a>
+        </li>
+      }
+    </ul>
+  } @else {
+    <p>No stories yet.</p>
+  }
+</main>

@@ -1,0 +1,11 @@
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ret-space-4);
+  padding: var(--ret-space-3) var(--ret-space-4);
+  border-block-end: var(--ret-border-width) solid var(--ret-color-border);
+}
+
+a {
+  color: var(--ret-color-info);
+}

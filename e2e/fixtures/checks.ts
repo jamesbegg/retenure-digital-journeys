@@ -17,6 +17,7 @@ export function reflowProblems(page: Page) {
     const root = document.documentElement;
     const clips = (o: string) => o === 'hidden' || o === 'clip';
     const clipped = [...document.querySelectorAll<HTMLElement>('body *')].filter((el) => {
+      if (el.closest('.ret-visually-hidden')) return false;
       const { overflowX, overflowY } = getComputedStyle(el);
       return (
         (clips(overflowX) && el.scrollWidth > el.clientWidth + 1) ||
