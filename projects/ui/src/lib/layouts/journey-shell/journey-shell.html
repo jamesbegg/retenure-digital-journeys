@@ -1,0 +1,47 @@
+<a class="skip-link" [href]="'#' + mainId" (click)="skipToMain($event, main)">{{
+  skipLinkLabel()
+}}</a>
+
+@if (showChrome()) {
+  <header class="header">
+    <ng-content select="[slot=header]" />
+  </header>
+}
+
+<main
+  #main
+  class="main"
+  [id]="mainId"
+  tabindex="-1"
+  [attr.aria-busy]="state() === 'loading' || null"
+>
+  <p class="ret-visually-hidden" role="status">
+    {{ state() === 'loading' ? loadingLabel() : '' }}
+  </p>
+  @if (state() === 'loading') {
+    <div class="skeleton" aria-hidden="true">
+      <span class="bar heading-bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+    </div>
+  } @else {
+    @if (steps()) {
+      <div class="steps">
+        <ng-content select="[slot=steps]" />
+      </div>
+    }
+    <h1 #title class="heading" tabindex="-1">{{ heading() }}</h1>
+    <div class="content">
+      <ng-content />
+    </div>
+    <div class="actions">
+      <ng-content select="[slot=actions]" />
+    </div>
+  }
+</main>
+
+@if (showChrome()) {
+  <footer class="footer">
+    <ng-content select="[slot=contact]" />
+  </footer>
+}
