@@ -97,8 +97,9 @@ export function parseJourneyResponse(json: unknown): JourneyResponse {
   const members = client.objects('members', person, 1);
   const memberIds = members.map((m) => m.id);
   unique(memberIds, 'journeyResponse.client.members');
-  if (lead.role !== 'lead' || members.find((m) => m.id === lead.id)?.role !== 'lead') {
-    client.fail('lead', 'must be a member with the lead role');
+  const leads = members.filter((m) => m.role === 'lead');
+  if (leads.length !== 1 || leads[0].id !== lead.id || leads[0].firstName !== lead.firstName) {
+    client.fail('lead', 'must match the one member with the lead role');
   }
   return {
     schemaVersion: body.schemaVersion(),

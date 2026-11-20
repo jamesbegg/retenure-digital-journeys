@@ -54,8 +54,6 @@ export type Question =
   | (QuestionBase & { kind: 'confirmFacts'; facts: HeldFact[] })
   | (QuestionBase & { kind: 'goals'; goals: string[] });
 
-export type QuestionKind = Question['kind'];
-
 export type Block =
   | { type: 'card'; question: Question }
   | { type: 'notice'; tone: 'info' | 'warning'; text: string }

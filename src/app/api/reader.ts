@@ -3,7 +3,7 @@ export class ParseError extends Error {}
 const isoTimestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
 
 // Reads one JSON object field by field and throws ParseError on anything unexpected.
-// Unknown fields are ignored and never copied into the result.
+// Unknown fields are ignored and never copied into the result; null counts as absent.
 export class Reader {
   private constructor(
     private readonly value: Record<string, unknown>,
@@ -21,8 +21,12 @@ export class Reader {
     throw new ParseError(`${this.path}.${key}: ${problem}`);
   }
 
+  raw(key: string): unknown {
+    return this.value[key];
+  }
+
   has(key: string): boolean {
-    return this.value[key] !== undefined;
+    return this.value[key] !== undefined && this.value[key] !== null;
   }
 
   schemaVersion(): 1 {
@@ -47,7 +51,7 @@ export class Reader {
 
   timestamp(key: string): string {
     const value = this.matching(key, isoTimestamp);
-    return isNaN(Date.parse(value)) ? this.fail(key, 'not a real time') : value;
+    return isNaN(Date.parse(value)) ? this.fail(key, 'unreadable time') : value;
   }
 
   boolean(key: string): boolean {

@@ -91,7 +91,7 @@ describe('parseJourneyResponse', () => {
   it.each(['checkbox', 'confirmFacts', 'goals', 'slider'])('rejects the kind %s in v1', (kind) => {
     const body = clone(hartwellOpenJourney);
     firstQuestion(body).kind = kind;
-    expect(() => parseJourneyResponse(body)).toThrow(ParseError);
+    expect(() => parseJourneyResponse(body)).toThrow(/question\.kind: expected one of/);
   });
 
   it.each([
@@ -100,12 +100,14 @@ describe('parseJourneyResponse', () => {
   ])('rejects a $type block in v1', (block) => {
     const body = clone(hartwellOpenJourney);
     body.sections[0].blocks.push(block);
-    expect(() => parseJourneyResponse(body)).toThrow(ParseError);
+    expect(() => parseJourneyResponse(body)).toThrow(/blocks\[3\]\.type: expected one of card/);
   });
 
   it('rejects follow-ups in v1', () => {
     const body = clone(hartwellOpenJourney);
     body.sections[1].blocks[0].question.followUps = [{ when: { equals: true }, questions: [] }];
+    expect(() => parseJourneyResponse(body)).toThrow(/followUps: not supported in v1/);
+    firstQuestion(body).followUps = [];
     expect(() => parseJourneyResponse(body)).toThrow(/followUps: not supported in v1/);
   });
 
@@ -114,8 +116,43 @@ describe('parseJourneyResponse', () => {
     firstQuestion(unknown).validators = [{ rule: 'postcode', message: 'Enter a postcode' }];
     const mismatched = clone(hartwellOpenJourney);
     firstQuestion(mismatched).validators = [{ rule: 'ukPhone', message: 'Enter a phone number' }];
-    expect(() => parseJourneyResponse(unknown)).toThrow(ParseError);
-    expect(() => parseJourneyResponse(mismatched)).toThrow(ParseError);
+    expect(() => parseJourneyResponse(unknown)).toThrow(/rule: expected one of/);
+    expect(() => parseJourneyResponse(mismatched)).toThrow(/rule: expected one of emailAddress$/);
+  });
+
+  it('rejects a validator missing a message or with a bound of the wrong type', () => {
+    const message = clone(hartwellOpenJourney);
+    delete message.sections[0].blocks[2].question.validators[0].messages.future;
+    const bound = clone(hartwellOpenJourney);
+    spending(bound).options[0].input.validators[0].min = '1';
+    expect(() => parseJourneyResponse(message)).toThrow(/messages\.future/);
+    expect(() => parseJourneyResponse(bound)).toThrow(/\.min: expected a number/);
+  });
+
+  it('rejects an autocomplete that does not suit the kind', () => {
+    const email = clone(hartwellOpenJourney);
+    firstQuestion(email).autocomplete = 'tel';
+    const date = clone(hartwellOpenJourney);
+    date.sections[0].blocks[2].question.autocomplete = 'name';
+    expect(() => parseJourneyResponse(email)).toThrow(/autocomplete/);
+    expect(() => parseJourneyResponse(date)).toThrow(/autocomplete/);
+  });
+
+  it('rejects an unknown option input type and a text question without multiline', () => {
+    const input = clone(hartwellOpenJourney);
+    spending(input).options[0].input.type = 'slider';
+    const multiline = clone(hartwellOpenJourney);
+    delete multiline.sections[1].blocks[3].question.multiline;
+    expect(() => parseJourneyResponse(input)).toThrow(/input\.type/);
+    expect(() => parseJourneyResponse(multiline)).toThrow(/multiline/);
+  });
+
+  it('treats a null optional field as absent', () => {
+    const body = clone(hartwellOpenJourney);
+    body.adviser.phone = null;
+    firstQuestion(body).hint = null;
+    body.sections[1].intro = null;
+    expect(parseJourneyResponse(body)).toEqual(hartwellOpenJourney);
   });
 
   it('rejects a validator on an option input of the wrong type', () => {
@@ -169,8 +206,14 @@ describe('parseJourneyResponse', () => {
     firstQuestion(person).personId = 'per-someone-else';
     const lead = clone(hartwellOpenJourney);
     lead.client.lead.id = 'per-tom';
-    expect(() => parseJourneyResponse(person)).toThrow(ParseError);
-    expect(() => parseJourneyResponse(lead)).toThrow(ParseError);
+    const twoLeads = clone(hartwellOpenJourney);
+    twoLeads.client.members[1].role = 'lead';
+    const role = clone(hartwellOpenJourney);
+    role.client.members[1].role = 'cousin';
+    expect(() => parseJourneyResponse(person)).toThrow(/personId/);
+    expect(() => parseJourneyResponse(lead)).toThrow(/lead: must match/);
+    expect(() => parseJourneyResponse(twoLeads)).toThrow(/lead: must match/);
+    expect(() => parseJourneyResponse(role)).toThrow(/role/);
   });
 
   it('rejects empty sections, blocks and radio options', () => {
@@ -206,6 +249,22 @@ describe('the smaller responses', () => {
     expect(parseSubmissionReceipt(receipt)).toEqual(receipt);
   });
 
+  it('fail closed on submitted and expired journeys', () => {
+    for (const fixture of [hartwellSubmittedJourney, hartwellExpiredJourney]) {
+      expect(() => parseJourneyResponse({ ...fixture, schemaVersion: 2 })).toThrow(/schemaVersion/);
+      expect(() => parseJourneyResponse({ ...fixture, adviser: undefined })).toThrow(/adviser/);
+    }
+    expect(() =>
+      parseJourneyResponse({ ...hartwellSubmittedJourney, submissionId: undefined }),
+    ).toThrow(/submissionId/);
+    expect(() =>
+      parseVerificationResponse({ ...hartwellVerificationOpen, status: 'locked' }),
+    ).toThrow(/status/);
+    expect(() =>
+      parseVerificationResponse({ ...hartwellVerificationOpen, schemaVersion: 2 }),
+    ).toThrow(/schemaVersion/);
+  });
+
   it('fail closed', () => {
     expect(() => parseVerificationResponse({ ...hartwellVerificationOpen, expiresAt: 1 })).toThrow(
       ParseError,
@@ -232,11 +291,12 @@ describe('parseApiError', () => {
     expect(parseApiError(error)).toEqual(error);
   });
 
-  it('drops an unrecognised reason so the status decides', () => {
-    expect(parseApiError({ ...error, reason: 'brand_new' })).not.toHaveProperty('reason');
+  it.each(['brand_new', null, 7])('drops the reason %s so the status decides', (reason) => {
+    expect(parseApiError({ ...error, reason })).not.toHaveProperty('reason');
   });
 
-  it('rejects a body that is not the shared error shape', () => {
-    expect(() => parseApiError({ message: 'Internal Server Error' })).toThrow(ParseError);
+  it('returns null for a body that is not the shared error shape, such as a gateway 401', () => {
+    expect(parseApiError({ message: 'Unauthorized' })).toBeNull();
+    expect(parseApiError('Bad Gateway')).toBeNull();
   });
 });
