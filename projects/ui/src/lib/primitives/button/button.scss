@@ -1,0 +1,110 @@
+:host {
+  display: inline-flex;
+  max-inline-size: 100%;
+}
+
+.button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--ret-target-lg);
+  min-inline-size: var(--ret-target-lg);
+  padding: var(--ret-space-2) var(--ret-space-4);
+  border: var(--ret-border-width-strong) solid transparent;
+  border-radius: var(--ret-radius);
+  background: none;
+  font-size: var(--ret-font-size-md);
+  font-weight: var(--ret-font-weight-bold);
+  line-height: var(--ret-line-height-tight);
+  text-align: center;
+  cursor: pointer;
+}
+
+.content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  min-inline-size: 0;
+}
+
+.label {
+  min-inline-size: 0;
+}
+
+.md {
+  min-block-size: var(--ret-target-md);
+  min-inline-size: var(--ret-target-md);
+  padding-inline: var(--ret-space-3);
+  font-size: var(--ret-font-size-sm);
+}
+
+.primary {
+  background: var(--ret-brand-primary);
+  color: var(--ret-brand-on-primary);
+}
+
+.danger {
+  background: var(--ret-color-danger);
+  color: var(--ret-color-on-danger);
+}
+
+.primary:hover:not(:disabled),
+.danger:hover:not(:disabled) {
+  background-image: linear-gradient(var(--ret-overlay-hover), var(--ret-overlay-hover));
+}
+
+.primary:active:not(:disabled),
+.danger:active:not(:disabled) {
+  background-image: linear-gradient(var(--ret-overlay-active), var(--ret-overlay-active));
+}
+
+.secondary {
+  border-color: var(--ret-brand-primary);
+  color: var(--ret-brand-primary);
+}
+
+.secondary:hover:not(:disabled),
+.ghost:hover:not(:disabled) {
+  background: var(--ret-color-surface-muted);
+}
+
+.secondary:active:not(:disabled),
+.ghost:active:not(:disabled) {
+  background: var(--ret-color-surface);
+}
+
+.ghost {
+  color: var(--ret-brand-primary);
+}
+
+.link {
+  padding-inline: var(--ret-space-1);
+  color: var(--ret-brand-primary);
+  font-weight: normal;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.link:hover:not(:disabled) {
+  text-decoration-thickness: 0.15em;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button[aria-disabled='true'] {
+  cursor: progress;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

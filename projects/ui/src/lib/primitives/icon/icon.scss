@@ -6,29 +6,29 @@
   vertical-align: middle;
 }
 
-:host(.sm) {
+:host([data-size='sm']) {
   inline-size: 1em;
   block-size: 1em;
 }
 
-:host(.lg) {
+:host([data-size='lg']) {
   inline-size: 1.5em;
   block-size: 1.5em;
 }
 
-:host(.info) {
+:host([data-tone='info']) {
   color: var(--ret-color-info);
 }
 
-:host(.success) {
+:host([data-tone='success']) {
   color: var(--ret-color-success);
 }
 
-:host(.warning) {
+:host([data-tone='warning']) {
   color: var(--ret-color-warning);
 }
 
-:host(.danger) {
+:host([data-tone='danger']) {
   color: var(--ret-color-danger);
 }
 

@@ -8,6 +8,11 @@ export async function blockingAxeViolations(page: Page) {
     .map((v) => `${v.id}: ${v.help}`);
 }
 
+export async function open(page: Page, route: string) {
+  await page.goto(route);
+  await page.locator('main').first().waitFor();
+}
+
 export async function setTextSize200(page: Page) {
   await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
 }

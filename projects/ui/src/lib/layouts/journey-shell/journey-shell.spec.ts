@@ -45,7 +45,7 @@ describe('JourneyShell', () => {
 
   it('narrows the column and shows no steps in the centred layout', async () => {
     const { container } = await renderShell('layout="centred"');
-    expect(container.firstElementChild?.classList).toContain('centred');
+    expect((container.firstElementChild as HTMLElement).dataset['layout']).toBe('centred');
     expect(screen.queryByText('Step 2 of 4')).toBeNull();
     h1();
   });

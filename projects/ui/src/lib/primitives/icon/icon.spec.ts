@@ -38,14 +38,13 @@ describe('Icon', () => {
       inputs: { name: 'circle-alert', size: 'lg', tone: 'danger' },
     });
     const host: HTMLElement = fixture.nativeElement;
-    expect(host.classList).toContain('lg');
-    expect(host.classList).toContain('danger');
+    expect(host.dataset['size']).toBe('lg');
+    expect(host.dataset['tone']).toBe('danger');
   });
 
   it('defaults to medium and the current text colour', async () => {
     const { fixture } = await render(Icon, { inputs: { name: 'info' } });
-    expect([...(fixture.nativeElement as HTMLElement).classList]).toEqual(
-      expect.arrayContaining(['md', 'current']),
-    );
+    const host: HTMLElement = fixture.nativeElement;
+    expect([host.dataset['size'], host.dataset['tone']]).toEqual(['md', 'current']);
   });
 });

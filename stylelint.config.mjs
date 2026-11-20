@@ -40,6 +40,17 @@ export default {
       rules: { 'color-no-hex': null, 'color-named': null, 'function-disallowed-list': null },
     },
     {
+      files: ['projects/ui/src/lib/**/*.scss'],
+      rules: {
+        'selector-disallowed-list': [
+          ['/:host\\([^)]*(\\.|class)/'],
+          {
+            message: "Style host variants by data attribute (:host([data-size='lg'])), not class.",
+          },
+        ],
+      },
+    },
+    {
       files: ['src/app/journeys/**/*.scss'],
       rules: {
         'property-allowed-list': [
