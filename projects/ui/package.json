@@ -9,5 +9,8 @@
   "exports": {
     ".": "./src/public-api.ts"
   },
-  "private": true
+  "private": true,
+  "dependencies": {
+    "lucide": "^1.77.0"
+  }
 }

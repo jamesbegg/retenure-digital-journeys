@@ -1,0 +1,38 @@
+:host {
+  display: inline-flex;
+  flex-shrink: 0;
+  inline-size: 1.25em;
+  block-size: 1.25em;
+  vertical-align: middle;
+}
+
+:host(.sm) {
+  inline-size: 1em;
+  block-size: 1em;
+}
+
+:host(.lg) {
+  inline-size: 1.5em;
+  block-size: 1.5em;
+}
+
+:host(.info) {
+  color: var(--ret-color-info);
+}
+
+:host(.success) {
+  color: var(--ret-color-success);
+}
+
+:host(.warning) {
+  color: var(--ret-color-warning);
+}
+
+:host(.danger) {
+  color: var(--ret-color-danger);
+}
+
+svg {
+  inline-size: 100%;
+  block-size: 100%;
+}
