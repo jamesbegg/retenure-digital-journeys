@@ -1,0 +1,24 @@
+<main>
+  <h1>ActionBar</h1>
+  @for (actions of examples; track $index) {
+    <section>
+      <h2>
+        {{ variants.actions[actions.kind]
+        }}{{ actions.link ? ', with link "' + actions.link + '"' : '' }}
+      </h2>
+      <ret-action-bar [actions]="actions" />
+    </section>
+  }
+  <section>
+    <h2>{{ variants.pending }}</h2>
+    <ret-action-bar
+      [actions]="{ kind: 'pair', secondary: 'Back', primary: 'Confirm', link: 'Nothing to add' }"
+      [pending]="true"
+    />
+  </section>
+  <section>
+    <h2>{{ variants.hidden }}</h2>
+    <ret-action-bar [actions]="{ kind: 'single', primary: 'Continue' }" [hidden]="true" />
+    <p>Nothing renders until the screen sets hidden to false.</p>
+  </section>
+</main>

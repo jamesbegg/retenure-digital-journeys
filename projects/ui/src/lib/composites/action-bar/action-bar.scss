@@ -1,0 +1,26 @@
+:host {
+  display: block;
+  container-type: inline-size;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ret-space-3);
+}
+
+.link-action {
+  margin-inline-end: auto;
+}
+
+@container (max-width: 30rem) {
+  .bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .link-action {
+    margin-inline-end: 0;
+  }
+}

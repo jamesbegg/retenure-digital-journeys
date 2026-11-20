@@ -6,3 +6,5 @@ export * from './lib/interfaces/button';
 export * from './lib/primitives/button/button';
 export * from './lib/interfaces/card';
 export * from './lib/composites/card/card';
+export * from './lib/interfaces/action-bar';
+export * from './lib/composites/action-bar/action-bar';
