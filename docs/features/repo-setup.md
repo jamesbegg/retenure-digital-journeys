@@ -26,7 +26,7 @@ Non-goals: journey screens, tenant resolution and theming (#3), the questions en
 | AC-6 | `Variants<C>` fails typecheck unless it lists every value of every literal-union input (string unions, and the `kind` of a discriminated object input) and names every boolean input, each with a description. | #2 |
 | AC-7 | An `input()`, `input.required()` or `model()` named `variant`, `size`, `tone`, `state`, `kind`, `type`, `layout`, `branding` or `*Position` has an explicit type argument that is not `string`. `@Input` and `@Output` decorators are banned. | #2 |
 | AC-8 | Every `interface`, `type` alias and inline object type literal lives in an `interfaces/` folder (specs excepted). | #8 |
-| AC-9 | Each component meets its issue's variants, states, accessibility notes and acceptance criteria. Axe passes on its gallery page at default and 200% text. At 320 px wide with 200% text, there is no horizontal scroll and no clipped text. 200% text is set per page load by `?text=200`, which sets `html { font-size: 200% }` so every `rem` scales. | component PRs |
+| AC-9 | Each component meets its issue's variants, states, accessibility notes and acceptance criteria. Axe passes on its gallery page at default and 200% text. At 320 px wide with 200% text, there is no horizontal scroll and no clipped text. 200% text sets `html { font-size: 200% }` so every `rem` scales: e2e injects it, and the gallery's `?text=200` does the same for people. | component PRs |
 | AC-10 | The production build has no gallery code and no synthetic firm name (`tools/check-dist.mjs`, run by `npm run build`). | #2 |
 | AC-11 | CI runs lint, typecheck, unit, guards, build and e2e on every PR. | #8 |
 | AC-12 | The `AGENTS.md` table lists each new rule with its real enforcement. The canon's paths and Angular version match the code. | #8, #2 |
@@ -204,6 +204,6 @@ None.
 - [x] Safety and data boundaries are defined (no tenant data; gallery out of production).
 - [x] Component states come from each issue.
 - [x] Single writer, linear stack, so no ownership conflicts.
-- [x] Shared contracts (`Variants`, slots, tokens, CVA helper) land in #2, before any component.
+- [x] Shared contracts (`Variants`, slots, tokens) land in #2, before any component. `utils/` (`nextId`, `provideValueAccessor`) and the `surface` mixin land with their first user (TextField and Card), so #2 adds no unused code.
 - [x] Material failures map to guards, specs or e2e.
 - [x] No unresolved decision can invalidate work underway.

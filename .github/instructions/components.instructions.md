@@ -1,5 +1,5 @@
 ---
-applyTo: "src/app/ui/**"
+applyTo: "projects/ui/**"
 ---
 
 # Shared components
@@ -8,7 +8,7 @@ Every component here is configurable and globally reusable. It must work unchang
 
 ## Rules
 
-1. **One component per job.** Before adding a component, search `src/app/ui/`. Before adding a variant, check whether an existing one covers it. A second screen that needs a slightly different version gets a typed variant on the existing component, never a copy.
+1. **One component per job.** Before adding a component, search `projects/ui/src/lib/`. Before adding a variant, check whether an existing one covers it. A second screen that needs a slightly different version gets a typed variant on the existing component, never a copy.
 2. **Configure through typed inputs.** Content (labels, hints, options, values), variant, size and state are `input()` signals with literal union types. Events are `output()`s. No component reads a route, a service that loads data, or global state.
 3. **No context knowledge.** A component never knows which journey, screen, firm or client it is in. No firm names, journey names or screen copy inside a component template. Default copy, where any is needed, comes from inputs with neutral defaults.
 4. **Brand through tokens only.** Colours, radius, font family and spacing come from CSS custom properties set by the tenant theme. No colour literals, logo paths or firm checks in a component.

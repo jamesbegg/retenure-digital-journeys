@@ -1,0 +1,7 @@
+<nav aria-label="Gallery">
+  <a routerLink="/gallery" queryParamsHandling="preserve">All stories</a>
+  <a [routerLink]="[]" [queryParams]="{ text: large() ? null : 200 }">
+    {{ large() ? 'Default text size' : '200% text size' }}
+  </a>
+</nav>
+<router-outlet />
