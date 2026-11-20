@@ -1,8 +1,8 @@
 # Questions engine: client contract, interfaces and renderer
 
-Status: revised after the fourth review; implementation awaits the user's go-ahead (#6 is a stop point)
+Status: revised after the fifth review; implementation awaits the user's go-ahead (#6 is a stop point)
 Risk: high (client answers, tenant isolation, the shape every journey depends on)
-Plan review: four rounds (findings at the end)
+Plan review: five rounds (findings at the end)
 
 Issues: #6 (engine and renderer), with the parts of #3 (branding), #5 (question library) and #7 (journey definition) the client app consumes.
 
@@ -63,12 +63,13 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
 - The email's button links to `https://<firm host>/start?utm_medium=email&utm_campaign=<templateId>#t=<token>`. The token is at least 256 bits of randomness and is stored only as a hash.
 - **UTM (user decision):** `utm_medium=email` and `utm_campaign` set to the template id (`invite`, `reminder`, `reissue`), which tells initial emails from follow-ups.
   - Values are template names only, never a person, household or message id.
-  - The app reads them, removes them from the address bar with the token, and records them on the first-party "journey opened" event (see the drop-out ADR).
+  - `utm_campaign` is allowlisted to `invite`, `reminder` and `reissue`, which are also the template ids. Any other value is dropped.
+  - The app reads them and removes them from the address bar with the token. Recording them belongs to the drop-out ADR's first-party "journey opened" event; nothing is recorded before that ADR.
   - Email-provider click and open tracking is off: it rewrites links through the provider's domain.
 - The token sits in the fragment (after `#`), so browsers never send it to the server, the CDN logs or other sites.
-- There is one live link per invitation; resending replaces it. A link expires 14 days after it is issued, or when the invitation itself expires.
+- There is one live link per invitation; resending replaces it. A link expires 14 days after it is issued. The invitation has its own expiry; a submitted invitation no longer expires.
 - The token can be used again until then: opening the email link again, or reverifying after the idle timeout, needs the token and the date of birth.
-- **After submission** the link still verifies for the rest of its 14 days, but only to a receipt. Verification returns the `submitted` result (`submittedAt`, `submissionId`, the adviser's contact), and creates no session, plan or answers, so nothing can be submitted again. A client whose submit response was lost can still confirm their answers went through.
+- **After submission** the link still verifies until its own 14 days run out (submission stops the invitation expiring, so nothing else ends it), but only to a receipt. Verification returns the `submitted` result (`submittedAt`, `submissionId`, the adviser's contact), and creates no session, plan or answers, so nothing can be submitted again. A client whose submit response was lost can still confirm their answers went through.
 
 **Verifying:**
 - The app reads the token and removes it from the address bar (`history.replaceState`), so it is not shared by copying the address or seen over a shoulder.
@@ -79,7 +80,7 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
 - **On success,** the backend creates the session (a new session id, stored server-side and only as a hash), sets the cookie, and returns `VerificationResponse` with the `journeyId` it is bound to. The app sends that id as `X-Journey-Id` on the first journey load and every protected request after, so another tab verifying a different invitation in between cannot point this tab at the wrong household.
 - **On failure,** the backend returns 401 `verification_failed`. The response is the same whether the token or the date was wrong, so nothing leaks.
 - **Expired link, invitation still open (user decision):**
-  - The backend creates an outbound message from the `linkReissue` template, addressed to the lead's email on file and never to anyone else (see Outbound messages).
+  - The backend creates an outbound message from the `reissue` template, addressed to the lead's email on file and never to anyone else (see Outbound messages).
   - The template's send mode decides the response, and the date of birth is not checked:
     - **`auto`** (the pilot setting): the message is queued. The backend answers 409 `link_reissued`, and the page says "We're sending you a new link, it should be with you shortly." (user's copy).
     - **`approval`:** the message waits for the adviser in the studio. The backend answers 409 `link_requested`. The page copy for this case is to come from the user before that mode is used.
@@ -87,17 +88,21 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
   - This happens only on Continue (a `POST`), never on page load, so an email scanner opening an old message cannot trigger it.
   - There is at most one reissue per invitation per 24 hours. Within that window the same response is shown but nothing new is created, so the inbox cannot be flooded.
     - **Tracked on the invitation row as `linkReissuedAt`,** pointing at its message.
-    - One transactional write sets it and creates the outbound message. The write is conditional on there being no `linkReissue` message for this invitation in the last 24 hours that is `pendingApproval`, `queued`, `sending` or `sent`.
+    - One transactional write sets it and creates the outbound message. The write is conditional on there being no `reissue` message for this invitation in the last 24 hours that is `pendingApproval`, `queued`, `sending` or `sent`.
     - A `failed` or `rejected` one does not count, so a failed send never blocks recovery.
     - Two concurrent presses therefore create one message.
-  - **The link is created when the email is sent, not before:**
-    - The message records the invitation's `linkGeneration`, not a link.
-    - At send time the worker checks that the invitation is still open and its `linkGeneration` is unchanged, and drops the message otherwise. So a delayed job never sends a stale or superseded link.
-    - It then generates the token, stores only its hash with `linkGeneration + 1`, and puts the live link only into the email it hands to the provider.
-    - The message record, the approval preview and the timeline show a placeholder, never a live link.
-    - If a retry after a crash sends a second email, the newer link replaces the first, so only one link ever works.
+  - **The link is created when the email is sent, not before.** The message records `baseGeneration` (the invitation's `linkGeneration` when it was created) and, once claimed, `ownedGeneration`. It never records a link.
+  - **Each send attempt** follows the backend's existing pattern (`email-transport/send-due.ts`): lease the message, record the attempt, then make one conditional write that mints a token and stores only its hash:
+    - **First attempt:** the invitation is open and its `linkGeneration` equals `baseGeneration`. Set the invitation's `linkGeneration = baseGeneration + 1` and the new hash; set the message's `ownedGeneration` to the same number.
+    - **Resumed attempt:** the invitation is open and its `linkGeneration` equals the message's `ownedGeneration`, so this message already owns the current link. Replace the hash with a freshly minted token. The generation stays the same.
+    - **Anything else**, meaning a newer link or a closed invitation: mark the message `superseded` and send nothing.
+    - Then hand the email, which holds the only copy of the live link, to the provider, and mark it `sent`.
+  - **Crash after the hash write, before sending:** the retry is a resumed attempt. It mints a fresh token and sends it, so the client always gets a working link.
+  - **Uncertain send** (the provider accepted, but the worker crashed before marking it sent): the retry sends again with a fresh token. The client may get two emails, and only the newer link works. That is the same narrow window as the other journey emails.
+  - The message record, the approval preview and the timeline show a placeholder, never a live link.
   - A forwarded old link therefore never grants access. It only sends the client a fresh link.
-- **Invitation expired or submitted:** no reissue. The client sees the calm page with the adviser's email, as for `JourneyResponse` `expired` and `submitted`.
+- **Invitation expired:** a valid token and date of birth return the `expired` verification result, which carries the adviser's contact for the calm page. There is no session and no reissue. A wrong date returns `verification_failed` as usual.
+- **Invitation submitted:** the `submitted` receipt result, as above. There is no reissue.
 - **After 5 failures for one invitation,** the invitation locks and returns 403 `verification_locked`. The client sees a calm page asking them to contact their adviser. The adviser unlocks it by resending the invitation, which issues a new link.
 - The endpoint is rate limited per IP address.
 - The date of birth is compared on the server and never logged. It is the lead's, which the adviser already holds.
@@ -109,7 +114,10 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
 
 **Backend canon:** this needs a documented `client` audience next to `/management` (Cognito) and `/processes`. It should state:
 - a Lambda authoriser for `/client/*` checks the session cookie against the session table, with result caching off in v1 (TTL 0), so a revoked or expired session is refused at once
-- API Gateway's own denials (401 or 403 before a handler runs) do not go through `handleError()`, so the client treats any 401 as `session_expired` and any 403 as forbidden, whatever the body says
+- API Gateway's own denials (401 or 403 before a handler runs) do not go through `handleError()` and carry no application `reason`. The client's rule:
+  1. An error body with a recognised `reason` is handled by that reason. This covers the public verification errors (`verification_failed`, `verification_locked`) and everything else from `handleError()`.
+  2. Only when there is no recognised `reason`, and only on protected `/client/*` requests, does the status decide: 401 is `session_expired`, 403 is forbidden.
+  3. The public routes never use the status-only fallback. An unrecognised error there shows the generic error page.
 - `/client/tenant` and `/client/verification` are the only public `client` routes
 - those two routes carry the rate limits above
 
@@ -134,7 +142,7 @@ Every journey email goes through one pipeline: invitations, reminders, link reis
 - **Sender:**
   - `firmIdentity` sends from the firm's verified name and domain (#3).
   - `adviserMailbox` sends from the adviser's connected mailbox, only when the firm has opted in and the connection is live. Otherwise the message falls back to `firmIdentity`.
-- **Pilot settings:** `linkReissue` is `auto` with `firmIdentity`. The other templates are set when they are built.
+- **Pilot settings:** `reissue` is `auto` with `firmIdentity`. The other templates are set when they are built.
 
 The client sees only two outcomes, `link_reissued` or `link_requested`. The rest is the backend's and the studio's.
 
@@ -318,7 +326,8 @@ type VerificationResponse =
       submittedAt: string;
       submissionId: string;
       adviser: AdviserContact;
-    };
+    }
+  | { schemaVersion: 1; status: 'expired'; journeyId: string; adviser: AdviserContact };   // no session
 
 interface SessionResponse {      // renewal
   schemaVersion: 1;
@@ -662,13 +671,18 @@ It must decide retention, who can see the data, and whether identifiers are scop
   - the token leaves the address bar after load
   - a wrong date of birth fails without saying which part was wrong
   - five failures lock the invitation
-  - an expired link with an open invitation creates one `linkReissue` message per 24 hours, to the address on file: `auto` queues it and returns `link_reissued`; `approval` holds it and returns `link_requested`
+  - an expired link with an open invitation creates one `reissue` message per 24 hours, to the address on file: `auto` queues it and returns `link_reissued`; `approval` holds it and returns `link_requested`
   - a failed or rejected reissue does not block a new request
   - a delayed job for a superseded `linkGeneration`, or a closed invitation, sends nothing
+  - a crash straight after the hash write resumes on retry, mints a fresh token, sends it, and the resent link works
+  - an uncertain send retried leaves only the newest link working
+  - a wrong date of birth shows `verification_failed`, a locked invitation shows `verification_locked`, and a gateway 401 with no reason on a protected request shows the expired-session flow: three separate tests
+  - an expired invitation with a valid token and date returns `expired` with the adviser's contact and no session
+  - receipt-only verification works until the link's 14 days end, then stops
   - no live link is stored in a message record, preview or timeline entry
   - after submission, verification returns only the receipt and creates no session
   - the authoriser does not cache, and a gateway 401 leads to the expired-session flow
-  - email links carry only `utm_medium` and `utm_campaign` with a template id, and provider tracking is off
+  - email links carry only `utm_medium=email` and an allowlisted `utm_campaign` (`invite`, `reminder`, `reissue`), other values are dropped, and provider tracking is off
   - an `auto` message states that it was automatic, carries no personal note, and appears on the household timeline
   - an expired link with a submitted or expired invitation reissues nothing
 - **Backend (for its repository):**
@@ -705,6 +719,15 @@ It must decide retention, who can see the data, and whether identifiers are scop
 | 12 | Branding boundary. | Accepted: asset URL rule, neutral reset; #3 and tenancy guide aligned. **Simplified:** neutral link previews in v1. |
 | 13 | Release scope and studio. | Accepted: v1 kinds gated at publish, "new journey" clarified, studio Angular 22 dependency. |
 | 14 | Readiness record and verification. | Accepted: owners, order, budget, verification matrix, review history. |
+
+### Fifth review (`1f364fc`)
+
+| # | Finding | Resolution |
+| --- | --- | --- |
+| 1 | A reissue worker could invalidate the old link and lose the replacement. | Accepted: the message records `baseGeneration` and `ownedGeneration`; a retry that owns the current generation resumes with a fresh token; superseded jobs stop; crash and uncertain-send tests added. |
+| 2 | The gateway fallback overrode the verification errors. | Accepted: a recognised `reason` always wins; the status-only fallback applies only to protected requests with no recognised reason; three separate tests. |
+| — | Verification for an expired invitation; receipt window. | Accepted: an `expired` verification result with the adviser's contact; receipts last until the link's 14 days end, because a submitted invitation does not expire. |
+| — | UTM recording and spelling. | Accepted: recording stays in the telemetry ADR; `utm_campaign` allowlisted to `invite`, `reminder`, `reissue`; template id unified as `reissue`. |
 
 ### Fourth review (`83ba16e`)
 
