@@ -147,6 +147,50 @@ describe('parseJourneyResponse', () => {
     expect(() => parseJourneyResponse(multiline)).toThrow(/multiline/);
   });
 
+  it('rejects a radio question with two options, which belongs to YesNo', () => {
+    const body = clone(hartwellOpenJourney);
+    spending(body).options.pop();
+    expect(() => parseJourneyResponse(body)).toThrow(/options: expected at least 3/);
+  });
+
+  it('rejects validator bounds the client could never satisfy, defaults included', () => {
+    const money = clone(hartwellOpenJourney);
+    Object.assign(spending(money).options[0].input.validators[0], { min: 100, max: 10 });
+    const negative = clone(hartwellOpenJourney);
+    spending(negative).options[0].input.validators[0].max = -1;
+    const age = clone(hartwellOpenJourney);
+    age.sections[0].blocks[2].question.validators[0].maxAge = 10;
+    expect(() => parseJourneyResponse(money)).toThrow(/max: below min/);
+    expect(() => parseJourneyResponse(negative)).toThrow(/max: below min/);
+    expect(() => parseJourneyResponse(age)).toThrow(/maxAge: below minAge/);
+  });
+
+  it('rejects a calendar date or time that does not exist', () => {
+    for (const expiresAt of [
+      '2026-02-30T12:00:00Z',
+      '2026-11-20T24:00:00Z',
+      '2026-11-20T12:60:00Z',
+      '2026-13-01T12:00:00Z',
+    ]) {
+      expect(() => parseJourneyResponse({ ...clone(hartwellOpenJourney), expiresAt })).toThrow(
+        /expiresAt/,
+      );
+    }
+    const leapDay = { ...clone(hartwellOpenJourney), expiresAt: '2028-02-29T23:59:59+01:00' };
+    expect(parseJourneyResponse(leapDay).status).toBe('open');
+  });
+
+  it('keeps payload values out of parse errors', () => {
+    const body = clone(hartwellOpenJourney);
+    spending(body).id = 'q-email';
+    expect(() => parseJourneyResponse(body)).toThrow(ParseError);
+    try {
+      parseJourneyResponse(body);
+    } catch (error) {
+      expect((error as Error).message).not.toContain('q-email');
+    }
+  });
+
   it('treats a null optional field as absent', () => {
     const body = clone(hartwellOpenJourney);
     body.adviser.phone = null;
@@ -206,6 +250,8 @@ describe('parseJourneyResponse', () => {
     firstQuestion(person).personId = 'per-someone-else';
     const lead = clone(hartwellOpenJourney);
     lead.client.lead.id = 'per-tom';
+    const leadRole = clone(hartwellOpenJourney);
+    leadRole.client.lead.role = 'partner';
     const twoLeads = clone(hartwellOpenJourney);
     twoLeads.client.members[1].role = 'lead';
     const role = clone(hartwellOpenJourney);
@@ -213,6 +259,7 @@ describe('parseJourneyResponse', () => {
     expect(() => parseJourneyResponse(person)).toThrow(/personId/);
     expect(() => parseJourneyResponse(lead)).toThrow(/lead: must match/);
     expect(() => parseJourneyResponse(twoLeads)).toThrow(/lead: must match/);
+    expect(() => parseJourneyResponse(leadRole)).toThrow(/lead: must match/);
     expect(() => parseJourneyResponse(role)).toThrow(/role/);
   });
 

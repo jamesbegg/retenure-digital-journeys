@@ -1,4 +1,4 @@
-import { Block, Question, QuestionOption, Section, ValidatorRef } from '@retenure/ui';
+import { ageLimits, Block, Question, QuestionOption, Section, ValidatorRef } from '@retenure/ui';
 import { Reader, unique } from './reader';
 
 // v1 renders these kinds and only card blocks, with no follow-ups. Anything else fails closed.
@@ -25,10 +25,14 @@ function validator(reader: Reader, allowed: readonly ValidatorRef['rule'][]): Va
       return { rule, message: reader.string('message') };
     case 'dateOfBirth': {
       const messages = reader.object('messages');
+      const minAge = reader.optionalInteger('minAge');
+      const maxAge = reader.optionalInteger('maxAge');
+      if ((maxAge ?? ageLimits.max) < (minAge ?? ageLimits.min))
+        reader.fail('maxAge', 'below minAge');
       return {
         rule,
-        minAge: reader.optionalInteger('minAge'),
-        maxAge: reader.optionalInteger('maxAge'),
+        minAge,
+        maxAge,
         messages: {
           future: messages.string('future'),
           tooYoung: messages.string('tooYoung'),
@@ -38,10 +42,13 @@ function validator(reader: Reader, allowed: readonly ValidatorRef['rule'][]): Va
     }
     case 'moneyAmount': {
       const messages = reader.object('messages');
+      const min = reader.optionalNumber('min');
+      const max = reader.optionalNumber('max');
+      if ((max ?? Infinity) < (min ?? 0)) reader.fail('max', 'below min');
       return {
         rule,
-        min: reader.optionalNumber('min'),
-        max: reader.optionalNumber('max'),
+        min,
+        max,
         messages: {
           unreadable: messages.string('unreadable'),
           tooLow: messages.string('tooLow'),
@@ -100,7 +107,7 @@ function question(reader: Reader, memberIds: ReadonlySet<string>): Question {
         noLabel: reader.optionalString('noLabel'),
       };
     case 'radio': {
-      const options = reader.objects('options', option, 2);
+      const options = reader.objects('options', option, 3);
       unique(
         options.map((o) => o.value),
         `${reader.path}.options`,

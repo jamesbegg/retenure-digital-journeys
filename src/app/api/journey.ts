@@ -98,7 +98,12 @@ export function parseJourneyResponse(json: unknown): JourneyResponse {
   const memberIds = members.map((m) => m.id);
   unique(memberIds, 'journeyResponse.client.members');
   const leads = members.filter((m) => m.role === 'lead');
-  if (leads.length !== 1 || leads[0].id !== lead.id || leads[0].firstName !== lead.firstName) {
+  if (
+    leads.length !== 1 ||
+    leads[0].id !== lead.id ||
+    leads[0].firstName !== lead.firstName ||
+    lead.role !== 'lead'
+  ) {
     client.fail('lead', 'must match the one member with the lead role');
   }
   return {

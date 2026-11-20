@@ -23,7 +23,12 @@ export const personName: ValidatorFn = (control) => {
     : { personName: true };
 };
 
-export function dateOfBirth(minAge = 18, maxAge = 110): ValidatorFn {
+export const ageLimits = { min: 18, max: 110 } as const;
+
+export function dateOfBirth(
+  minAge: number = ageLimits.min,
+  maxAge: number = ageLimits.max,
+): ValidatorFn {
   return (control): ValidationErrors | null => {
     const iso = text(control);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;

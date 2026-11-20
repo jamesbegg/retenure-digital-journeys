@@ -1,6 +1,14 @@
 export class ParseError extends Error {}
 
-const isoTimestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+const isoTimestamp =
+  /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+
+// Date.parse rolls 30 February into March, so check the calendar date itself.
+function realDate(value: string): boolean {
+  const [, year, month, day] = isoTimestamp.exec(value) ?? [];
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  return date.toISOString().startsWith(`${year}-${month}-${day}`);
+}
 
 // Reads one JSON object field by field and throws ParseError on anything unexpected.
 // Unknown fields are ignored and never copied into the result; null counts as absent.
@@ -50,8 +58,8 @@ export class Reader {
   }
 
   timestamp(key: string): string {
-    const value = this.matching(key, isoTimestamp);
-    return isNaN(Date.parse(value)) ? this.fail(key, 'unreadable time') : value;
+    const value = this.string(key);
+    return isoTimestamp.test(value) && realDate(value) ? value : this.fail(key, 'not a real time');
   }
 
   boolean(key: string): boolean {
@@ -106,8 +114,8 @@ export class Reader {
 
 export function unique(values: string[], path: string): void {
   const seen = new Set<string>();
-  for (const value of values) {
-    if (seen.has(value)) throw new ParseError(`${path}: duplicate ${value}`);
+  values.forEach((value, i) => {
+    if (seen.has(value)) throw new ParseError(`${path}[${i}]: duplicate`);
     seen.add(value);
-  }
+  });
 }

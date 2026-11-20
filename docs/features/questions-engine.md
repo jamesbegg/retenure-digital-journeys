@@ -536,7 +536,7 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
   - `submissionId` kept across retries
   - the leave prompt
   - JourneyShell `state` (`loading`, `ready`, `error`, `blocked`)
-- **Parsers** (`src/app/api/`): one per response, failing closed. Unknown fields are dropped and `null` counts as absent. `parseApiError` returns `null` for a body that is not the shared error shape (a gateway 401), so the caller decides from the status.
+- **Parsers** (`src/app/api/`): one per response, failing closed. Unknown fields are dropped and `null` counts as absent. `parseApiError` returns `null` for a body that is not the shared error shape (a gateway 401), so the caller decides from the status. A `radio` question needs at least three options (two belong to `yesNo`), validator bounds must leave a satisfiable range after defaults, timestamps must be real calendar times, and a `ParseError` names the field path but never a payload value.
 - **`QuestionRenderer`** (`@retenure/ui`):
   - A pure component: inputs and outputs, no services, so the studio preview reuses it.
   - An exhaustive `switch` on `kind`.
