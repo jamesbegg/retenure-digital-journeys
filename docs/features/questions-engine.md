@@ -21,7 +21,7 @@ Non-goals:
 
 - **Selection logic.** The backend engine (#6 pipeline) decides which questions a client gets. The client renders a frozen plan and never decides what to ask. No question sets live in this repository.
 - **Storing or editing the question library** (#5, #7).
-- **Verification screens.** They are a separate deliverable, but the identity and session they produce are a dependency of this one (see Sessions).
+- **Verification screen design.** The rules are set here (see Client authentication), but the screen goes through the journey-screen design gate.
 - **Branded link previews.** In v1 they are neutral (see Branding).
 - **Drafts and save-and-come-back.** Answers are submitted once. Drafts can be added later if drop-out data shows a need.
 - **Several hosts per firm, and redirects between them.** Deferred to #3.
@@ -55,9 +55,38 @@ Non-goals:
   - only then is its row set to `active`
 - **Unknown, pending or suspended host:** the generic error page.
 
+## Client authentication (decided by the user)
+
+A secure email link plus the lead's date of birth. No accounts, no Cognito user, no phone needed.
+
+**The link:**
+- The email carries `https://<firm host>/start#t=<token>`. The token is at least 256 bits of randomness and is stored only as a hash.
+- The token sits in the fragment (after `#`), so browsers never send it to the server, the CDN logs or other sites.
+- There is one live link per invitation; resending replaces it. It stops working when the invitation is submitted or expires, or after 30 days.
+- The token can be used again until then: opening the email link again, or reverifying after the idle timeout, needs the token and the date of birth.
+
+**Verifying:**
+- The app reads the token and removes it from the address bar (`history.replaceState`), so it is not shared by copying the address or seen over a shoulder.
+- It keeps the token in memory only, never in storage.
+- The page asks for the lead's date of birth with the TextField date control (`autocomplete="bday"`, paste allowed).
+- Nothing happens when the page loads. Email security scanners open links automatically, and a `GET` must never use up a link or start a session.
+- The client presses Continue, which sends `POST /client/verification` with `{ token, dateOfBirth }`.
+- **On success,** the backend creates the session (a new session id, stored server-side and only as a hash), sets the cookie, and returns `SessionResponse`. The app then loads the journey.
+- **On failure,** the backend returns 401 `verification_failed`. The response is the same whether the token or the date was wrong, so nothing leaks.
+- **After 5 failures for one invitation,** the invitation locks and returns 403 `verification_locked`. The client sees a calm page asking them to contact their adviser. The adviser unlocks it by resending the invitation, which issues a new link.
+- The endpoint is rate limited per IP address.
+- The date of birth is compared on the server and never logged. It is the lead's, which the adviser already holds.
+
+**WCAG 3.3.8 (accessible authentication):** a date of birth is personal content the client has already given their adviser, which the criterion allows. The field supports autofill and paste, so nothing has to be remembered and retyped by hand.
+
+**Backend canon:** this needs a documented `client` audience next to `/management` (Cognito) and `/processes`. It should state:
+- a Lambda authoriser for `/client/*` checks the session cookie against the session table
+- `/client/tenant` and `/client/verification` are the only public `client` routes
+- those two routes carry the rate limits above
+
 ## Sessions
 
-These are client sessions: invitation-based, with no account and no Cognito user (see Unresolved and blocking).
+These are client sessions, created by verification (see Client authentication): invitation-based, with no account and no Cognito user.
 
 **Cookie and requests:**
 - One host-only cookie: `__Host-ret_session`, `Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/`, no `Domain`.
@@ -89,7 +118,7 @@ The backend checks both headers against the host and the session, and answers 40
   - If a renewal fails, the client retries once. If `expiresAt` has passed, it treats the session as expired.
 - **Expired:**
   - The page hides the journey: no answers or held facts stay on screen.
-  - The page shows the verification step. Answers stay in memory only.
+  - The page shows the date-of-birth step again, using the token held in memory. Answers stay in memory only. If the page was reloaded and the token is gone, the client opens the email link again.
   - Reverification must return the same tenant, invitation, journey id and plan. Then the client shows the answers again and lets the client continue or submit.
   - If any of those differ, the client discards the answers and loads the new journey fresh.
   - Nothing is lost while the tab stays open, and nothing sensitive stays visible while it is unattended.
@@ -100,6 +129,7 @@ These follow the backend canon: Lambda handlers, a new `client` audience, singul
 
 | Method and path | Success | Notes |
 | --- | --- | --- |
+| `POST /client/verification` | 200 `SessionResponse` | Body `{ token, dateOfBirth }`. Sets the session cookie. Public and rate limited. |
 | `GET /client/tenant` | 200 `TenantResponse` | Firm from `X-Retenure-Host`. Branding only. `Cache-Control: no-store` in v1, so a host switch or suspension takes effect immediately. |
 | `GET /client/journey` | 200 `JourneyResponse` | The session's journey: `open` with its plan, or `submitted` or `expired` with only what the calm page needs. |
 | `POST /client/journey/session` | 200 `SessionResponse` | Body `{}`. Renews the session and returns the new `expiresAt`. |
@@ -155,6 +185,8 @@ type ClientErrorReason =
   | 'submission_mismatch'   // 409 on submission: same id, different payload
   | 'invalid_submission'    // 400 with fieldErrors
   | 'unsupported_plan'      // 409 on /client/journey: the frozen plan uses something this client cannot render
+  | 'verification_failed'   // 401 on verification: token or date of birth wrong (same response either way)
+  | 'verification_locked'   // 403 on verification: too many failures; contact the adviser
   | 'forbidden_origin';     // 403
 ```
 
@@ -512,13 +544,12 @@ It must decide retention, who can see the data, and whether identifiers are scop
 
 ### Unresolved and blocking (backend owner)
 
-1. **Client auth versus the backend canon.** The backend canon requires Cognito on any endpoint that reads or writes user data. Client journeys use an invitation session with no account. The backend must either add the `client` audience to its canon, or put client sessions on Cognito (for example custom auth). This decision blocks the backend work.
+1. **Client auth (decided: an invitation session, with the lead's date of birth as the second step).** The backend owner adds the `client` audience to the backend canon, as described in Client authentication. The decision is made; this is the canon change still to land.
 2. **Route namespace.** Confirm `/client/*` as the new audience.
 3. **The edge secret mechanism, decided with infrastructure:** a secret header checked by the backend, or an API Gateway resource policy.
 
 ### Unresolved and non-blocking
 
-- Verification method payloads and screens.
 - The full host lifecycle (several hosts, canonical switch, redirects, cache purge), to be planned in #3.
 
 ## Ownership, order and budget
@@ -526,7 +557,7 @@ It must decide retention, who can see the data, and whether identifiers are scop
 | Owner | Work |
 | --- | --- |
 | Infrastructure (`my-wealth-infra`) | `X-Retenure-Host` set at the edge, the edge secret, alternate domain names and certificates for custom domains, `no-store` passed through |
-| Backend (`my-wealth-backend`) | Host table; the four endpoints; the session, cookie and `Origin` rules; atomic idempotent submission with its outbox; whole-batch validation; the household copy filter; #5 publish checks including the v1 kinds |
+| Backend (`my-wealth-backend`) | Host table; the `client` audience, Lambda authoriser, verification with lockout and the session table; the five endpoints; the session, cookie and `Origin` rules; atomic idempotent submission with its outbox; whole-batch validation; the household copy filter; #5 publish checks including the v1 kinds |
 | This repository | Interfaces with fixtures for the two synthetic firms; parsers; `TenantService` and its interceptor; `JourneyService`; RadioGroup `optionErrors`; `QuestionRenderer` for the v1 kinds |
 | Studio | Angular 22 upgrade, then the preview using the shared renderer |
 
@@ -557,6 +588,10 @@ It must decide retention, who can see the data, and whether identifiers are scop
   - a lost submit response followed by an expired session leads to the done screen after reverifying
   - `journey_mismatch` shows the generic page
   - client responses carry `no-store`
+  - opening the link (a `GET`) starts no session and uses nothing up
+  - the token leaves the address bar after load
+  - a wrong date of birth fails without saying which part was wrong
+  - five failures lock the invitation
 - **Backend (for its repository):**
   - a replay with the same id and payload returns the receipt
   - the same id with a different payload gets `submission_mismatch`
