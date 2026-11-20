@@ -18,7 +18,7 @@ import { nextId } from '../../utils/id';
 export class JourneyShell {
   readonly heading = input.required<string>();
   readonly layout = input<ShellLayout>('default');
-  readonly branding = input<ShellBranding>('firm');
+  readonly branding = input.required<ShellBranding>();
   readonly state = input<ShellState>('ready');
   readonly skipLinkLabel = input('Skip to main content');
   readonly loadingLabel = input('Loading');
