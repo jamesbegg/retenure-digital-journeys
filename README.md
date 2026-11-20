@@ -4,4 +4,18 @@ The client-facing app for adviser-sent journeys: the annual check-in, follow-ups
 
 Start with `AGENTS.md`. It links the architecture canon in `.github/copilot-instructions.md` and the focused rules for components, accessibility, tenancy, journey screens and tests.
 
-Status: rules and plans only. The Angular app is not scaffolded yet. Work is tracked in GitHub issues under the digital journeys epic.
+Work is tracked in GitHub issues under the digital journeys epic.
+
+## Commands
+
+Node 24 (`nvm use`).
+
+| Command | Runs |
+| --- | --- |
+| `npm start` | Dev server |
+| `npm run lint` | ESLint, stylelint and the journey template check |
+| `npm run typecheck` | App and spec types, including templates |
+| `npm test` | Unit specs and the guard tests that prove each lint rule |
+| `npm run e2e` | Playwright: axe, 320 px with 200% text, tenancy |
+| `npm run build` | Production build |
+| `npm run format` | Prettier |

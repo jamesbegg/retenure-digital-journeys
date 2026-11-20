@@ -12,7 +12,8 @@ Never run deploy, DNS or certificate commands unless the user's current request 
 
 ## 1) Architecture
 
-- **App**: Angular 20, standalone components, signals for local state, typed reactive forms for every control, lazy-loaded routes by journey. No NgRx without an ADR.
+- **App**: Angular 22 on Node 24 (`.nvmrc`), standalone components, signals for local state, typed reactive forms for every control, lazy-loaded routes by journey. No NgRx without an ADR.
+- **Tests**: Vitest through `ng test` with Testing Library for specs, `node --test` for `tools/` guards, Playwright with axe for e2e.
 - **Styling**: SCSS with design tokens exposed as CSS custom properties. The tenant theme sets the brand tokens at runtime; components read tokens and never hold brand values.
 - **Shared UI**: the components in `src/app/ui/` are the only building blocks a journey screen uses. They are written to move into a shared package (`@retenure/ui`) that the adviser studio also consumes for previews, so they import nothing from journeys, routes or services.
 - **Backend**: `my-wealth-backend` owns tenants, journeys, question sets, answers and client verification. This app holds no business rules that decide what to ask; it renders what the questions engine returns.
