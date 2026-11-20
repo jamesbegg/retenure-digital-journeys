@@ -1,8 +1,8 @@
 # Questions engine: client contract, interfaces and renderer
 
-Status: revised after the second review; implementation awaits the user's go-ahead (#6 is a stop point)
+Status: revised after the third review; implementation awaits the user's go-ahead (#6 is a stop point)
 Risk: high (client answers, tenant isolation, the shape every journey depends on)
-Plan review: two rounds (findings at the end)
+Plan review: three rounds (findings at the end)
 
 Issues: #6 (engine and renderer), with the parts of #3 (branding), #5 (question library) and #7 (journey definition) the client app consumes.
 
@@ -68,9 +68,16 @@ These are client sessions: invitation-based, with no account and no Cognito user
 
 **Headers the client sends:**
 - `X-Tenant-Id`, from `TenantService`, on every call except `GET /client/tenant`, which is how the client learns it.
-- `X-Journey-Id`, from the loaded journey, on renewal and submit.
+- `X-Journey-Id`, from the loaded journey, on renewal, submit, and any journey load made while the page already holds a journey (after reverification).
 
 The backend checks both headers against the host and the session, and answers 409 `journey_mismatch` on any difference.
+
+**The journey id is the binding.** `journey.id` identifies exactly one invitation and its frozen plan:
+- It is created when the invitation is sent, and never reused, even when two invitations use the same journey definition.
+- It never changes for the invitation's lifetime.
+- A plan never changes under an existing id.
+- Matching `journey.id` therefore means the same invitation and the same plan, and no other binding token is needed.
+- A full page reload clears memory, so it has nothing to bind.
 
 **Timing (WCAG 2.2.1):**
 - The idle limit is 30 minutes. There is no absolute cap.
@@ -93,56 +100,67 @@ These follow the backend canon: Lambda handlers, a new `client` audience, singul
 
 | Method and path | Success | Notes |
 | --- | --- | --- |
-| `GET /client/tenant` | 200 `TenantResponse` | Firm from `X-Retenure-Host`. Branding only. Cached per host at the edge. |
-| `GET /client/journey` | 200 `JourneyResponse` | The session's journey. `Cache-Control: no-store, private`. |
+| `GET /client/tenant` | 200 `TenantResponse` | Firm from `X-Retenure-Host`. Branding only. `Cache-Control: no-store` in v1, so a host switch or suspension takes effect immediately. |
+| `GET /client/journey` | 200 `JourneyResponse` | The session's journey: `open` with its plan, or `submitted` or `expired` with only what the calm page needs. |
 | `POST /client/journey/session` | 200 `SessionResponse` | Body `{}`. Renews the session and returns the new `expiresAt`. |
 | `POST /client/journey/submission` | 200 `SubmissionReceipt` | Body `SubmissionBody`. Validates the whole batch, accepts it atomically, and is safe to retry. |
 
-Every JSON response carries `schemaVersion: 1`. Every response from these endpoints, success or error, has `Cache-Control: no-store, private`, except the tenant lookup.
+Every success response carries `schemaVersion: 1`. Errors use the backend's shared body unchanged (see Errors). Every response from these endpoints, success or error, has `Cache-Control: no-store, private`, including the tenant lookup.
 
 ### Submitting
 
-- **Retry-safe.** The client generates `submissionId` (a UUID) once for each submission attempt, and keeps it in memory when it retries after a network failure.
-  - The same `submissionId` again returns the original `SubmissionReceipt` with 200, so a lost response can be recovered.
-  - A different `submissionId` after the journey was accepted gets 409 `already_submitted`, with the original `submittedAt`. That could be another tab, or a submit that was lost and then tried again.
-- **Atomic.** One transaction stores the answers, the receipt keyed by `submissionId`, and the invitation's move to `submitted`, conditional on the invitation still being open.
-- **Household copy and adviser notification are sent once.** The same transaction writes an outbox marker, which a worker sends once. It never sends from the request handler.
+- **Retry-safe.**
+  - The client generates `submissionId` (a UUID) once for each submission attempt, and keeps it in memory when it retries.
+  - A retry is the same `submissionId` with the same payload. The backend stores a hash of the payload with the receipt.
+  - Receipts are scoped to the verified invitation: the key is `journey.id` plus `submissionId`, so an id from another invitation never matches.
+  - **Same id, same payload:** the original `SubmissionReceipt` with 200.
+  - **Same id, different payload:** 409 `submission_mismatch`.
+  - **A concurrent request with the same id that loses the transaction:** the backend reads the committed receipt and returns it with 200.
+  - **A different id after the journey was accepted:** 409 `already_submitted`. That could be another tab, or a lost submit that was then tried again.
+  - **Response lost, then the session expired:** the client verifies again. If the journey is the same, it resends the same `submissionId` and payload and gets the receipt. If `GET /client/journey` already reports `submitted`, the client compares the `submissionId` it returns with its own, and shows the done screen when they match.
+- **Atomic.** One transaction stores the answers, the receipt and payload hash, the invitation's move to `submitted`, and one outbox record per notification. It is conditional on the invitation still being open.
+- **Notifications are queued exactly once and delivered at least once.** A worker leases each outbox record, records the attempt, sends it and marks it sent, using the same pattern as the backend's `processProposalApplies`.
+  - If the worker crashes after the email provider has accepted a message but before marking it sent, a retry can send a duplicate.
+  - That window is accepted for a copy email. The guarantee is no lost email and at most a rare duplicate, not exactly-once delivery.
 - **The household copy never includes answers marked sensitive** (#5). Those reach the adviser only. The copy goes only to members the backend holds a verified email for.
-- **The whole batch is validated against the frozen plan.** On any failure, the backend stores nothing, the invitation stays open, and it answers 400 with `fieldErrors` keyed by question id:
+- **The whole batch is validated against the frozen plan.** On any failure, the backend stores nothing, the invitation stays open, and it answers 400 with `fieldErrors` whose `field` is `answers.<questionId>`, or `answers` for a batch-level problem:
   - every `questionId` exists in the plan, appears once, and its `questionVersion` matches
   - each answer's `kind` matches its question's
   - option values, option-detail fields and fact ids belong to that question
   - the wire formats are right (money, ISO date, booleans)
   - every required question on an open branch is answered
   - the declared validators pass, applied by the same rules as the shared client validators
-  - follow-up branches are evaluated from the submitted parent answers, including nested follow-ups, and an answer on a closed branch is rejected
+  - when follow-ups are enabled (after v1), branches are evaluated from the submitted parent answers, including nested follow-ups, and an answer on a closed branch is rejected
   - an optional question left blank is simply absent from the batch
 
 ### Errors
 
-The backend's shared body:
+The backend's shared body, from `handleError()` in `src/utils/httpErrors.ts`, unchanged:
 
 ```ts
 interface ApiError {
-  error: string;
+  error: string;                 // e.g. 'VALIDATION_ERROR', 'CONFLICT'
   statusCode: number;
   message: string;               // safe, never shown to the client verbatim
   requestId: string;
-  fieldErrors?: { questionId: string; reason: string }[];
-  reason?: ClientErrorReason;
-  adviser?: AdviserContact;      // on 'invitation_expired' and 'already_submitted'
-  submittedAt?: string;          // on 'already_submitted'
+  fieldErrors?: { field: string; code: string; message: string }[];   // field: 'answers.<questionId>' or 'answers'
+  reason?: ClientErrorReason;    // added with withReason()
 }
 
 type ClientErrorReason =
   | 'unknown_host'          // 404 on /client/tenant
   | 'journey_mismatch'      // 409: host, X-Tenant-Id, X-Journey-Id and session disagree
   | 'session_expired'       // 401
-  | 'invitation_expired'    // 409
-  | 'already_submitted'     // 409
+  | 'already_submitted'     // 409 on submission with a different submissionId
+  | 'submission_mismatch'   // 409 on submission: same id, different payload
   | 'invalid_submission'    // 400 with fieldErrors
+  | 'unsupported_plan'      // 409 on /client/journey: the frozen plan uses something this client cannot render
   | 'forbidden_origin';     // 403
 ```
+
+- The client shows its own copy for each `reason`, never `message`.
+- A field error's `message` is a safe fallback. The client prefers the question's own validator message for the matching `code`.
+- An expired invitation and an already-submitted journey are not errors. They are `JourneyResponse` states, so the adviser's contact travels on a normal success response.
 
 ## Interfaces
 
@@ -183,14 +201,25 @@ interface BrandColours {
 ### Journey
 
 ```ts
-interface JourneyResponse {
-  schemaVersion: 1;
-  journey: JourneyMeta;
-  client: ClientInfo;
-  adviser: AdviserContact;
-  sections: Section[];
-  expiresAt: string;           // server idle deadline
-}
+type JourneyResponse =
+  | {
+      schemaVersion: 1;
+      status: 'open';
+      journey: JourneyMeta;
+      client: ClientInfo;
+      adviser: AdviserContact;
+      sections: Section[];
+      expiresAt: string;       // server idle deadline
+    }
+  | {
+      schemaVersion: 1;
+      status: 'submitted';
+      journeyId: string;
+      adviser: AdviserContact;
+      submittedAt: string;
+      submissionId: string;    // lets a tab that lost its response recognise its own submission
+    }
+  | { schemaVersion: 1; status: 'expired'; journeyId: string; adviser: AdviserContact };
 
 interface SessionResponse {
   schemaVersion: 1;
@@ -390,7 +419,7 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
   - A pure component: inputs and outputs, no services, so the studio preview reuses it.
   - An exhaustive `switch` on `kind`.
   - One `FormControl` per question, with the per-kind rules above.
-  - Follow-ups open on their `AnswerMatch`. When a branch closes, the renderer clears its answers, emits the section map without them, and announces `copy.followUpsCleared`.
+  - After v1, with QuestionCard: follow-ups open on their `AnswerMatch`. When a branch closes, the renderer clears its answers, emits the section map without them, and announces `copy.followUpsCleared`.
 
 **Leaving the page (best-effort):**
 - The browser's own prompt runs when there are unsent answers. Browsers may suppress it, so the copy never promises it.
@@ -407,8 +436,18 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
 
 ## Release scope
 
-- **v1 kinds:** `yesNo`, `radio`, `text`, `email`, `tel`, `money` and `date`, which today's components cover. The backend must not put any other kind in a v1 client's plan; the publish check (#5) enforces this until the remaining components ship.
-- **Later, together with their components:** `checkbox` (#16), `confirmFacts` and `goals` (#31, #32), the `notice` block (#23), and QuestionCard (#35) for follow-ups.
+- **v1 supports these question kinds:** `yesNo`, `radio`, `text`, `email`, `tel`, `money` and `date`, the ones today's components cover.
+- **v1 supports one block type:** `card`.
+- **v1 has no follow-ups.** They need QuestionCard (#35), so they arrive with it.
+- **Enforced in three places:**
+  - The #5 publish check refuses a v1 journey definition that uses anything else.
+  - **When serving,** the backend checks the frozen plan before it answers `GET /client/journey`. A plan using an unsupported kind, block or `followUps` (one frozen before the check existed, for instance) gets 409 `unsupported_plan`, and the backend alerts the adviser. It never sends a plan the client cannot render.
+  - **The v1 parser** accepts only the v1 kinds and block, and rejects any `followUps`. The wire types keep the full unions for later releases, but the parser enforces the v1 subset.
+- **Later, together with their components:**
+  - `checkbox` (#16)
+  - `confirmFacts` and `goals` (#31, #32)
+  - the `notice` and `facts` blocks (#23, #31)
+  - follow-ups, with QuestionCard (#35)
 - **"New journey" means new data.** A new configuration of an existing `JourneyMeta.type` is backend data only. A new `type` value is a code change.
 - **Studio preview depends on an upgrade.** The studio is on Angular 20, and `@retenure/ui` needs Angular 22. The studio upgrades to Angular 22 first; Angular 20 reaches end of life this month. Preview parity is not deliverable until then.
 
@@ -424,7 +463,7 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
 ## Security and ownership boundaries
 
 - Firm from the edge-set host; journey from the session; `X-Tenant-Id` and `X-Journey-Id` are cross-checked, never trusted alone.
-- A `__Host-` cookie with `Path=/`, an exact `Origin` match on `POST`, and `no-store` on every client response except the tenant lookup.
+- A `__Host-` cookie with `Path=/`, an exact `Origin` match on `POST`, and `no-store` on every client response, including the tenant lookup.
 - Answers are never logged, put in a URL or sent to analytics. Logs use ids and outcomes only.
 - First names only; held facts are for the client's own household; no `libraryId`, reasons or suppressed list.
 - Prompts, hints and fact values render as text, never as HTML. Asset URLs must be under the tenant's own prefix.
@@ -438,9 +477,11 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
 | `unknown_host`, tenant lookup fails | Neutral reset, then the generic error page. |
 | Journey fetch or parse fails, `journey_mismatch` | Neutral reset, in-memory answers discarded, then the generic error page. |
 | `session_expired`, or `expiresAt` passed | Hide the journey and show verification. Same journey: restore the answers. Different journey: discard them. |
-| `invitation_expired` | A calm, branded page with the adviser's email from `ApiError.adviser`. |
-| `already_submitted` with this tab's `submissionId` | It cannot happen: the replay returns the receipt and the client shows the done screen. |
-| `already_submitted` with another id | A calm page: "These answers were already sent on <date>", with the adviser's email. |
+| Journey `status: 'expired'` | A calm, branded page with the adviser's email. |
+| Journey `status: 'submitted'` with this tab's `submissionId` | The done screen: the submission went through, and only its response was lost. |
+| Journey `status: 'submitted'` with another id, or `already_submitted` | A calm page: "These answers were already sent on <date>", with the adviser's email. |
+| `submission_mismatch` | It should not happen, because the client never changes a payload under the same id. Show the generic error page and log the ids. |
+| `unsupported_plan` | The generic error page, telling the client their adviser has been told. |
 | `invalid_submission` | Go to the first question in `fieldErrors` with its message. If none of them is on screen, stay on Check your answers with a general message. |
 | Submit network failure | Retry with the same `submissionId`. The answers are still in memory. |
 
@@ -500,7 +541,8 @@ It must decide retention, who can see the data, and whether identifiers are scop
   - each v1 kind renders its component, and `personId` questions name the person
   - the per-kind completion rules, including optional blanks, `false` and whitespace
   - an option-input error appears on its field
-  - follow-ups close, clear and announce
+  - the v1 parser rejects `checkbox`, `confirmFacts`, `goals`, `notice`, `facts` and any `followUps`
+  - (after v1) follow-ups close, clear and announce
 - **`JourneyService`, with HTTP mocked:**
   - renewal is throttled and scheduled from `expiresAt`, never from a local clock alone
   - the idle warning appears 2 minutes before the deadline
@@ -511,11 +553,18 @@ It must decide retention, who can see the data, and whether identifiers are scop
   - no answer values in logs
 - **e2e:**
   - a synthetic v1 journey on both synthetic firm hosts: tenancy, a11y and zoom (the route list grows from the gallery to journey routes, and the tenancy spec loses `fixme`)
-  - two invitations in one browser on one host: the second does not reuse the first tab's answers
+  - two invitations in one browser on one host, both using the same journey definition, have different `journey.id` values, and the second never restores the first tab's answers
+  - a lost submit response followed by an expired session leads to the done screen after reverifying
   - `journey_mismatch` shows the generic page
   - client responses carry `no-store`
 - **Backend (for its repository):**
-  - a replay returns the receipt, and a different id gets `already_submitted`
+  - a replay with the same id and payload returns the receipt
+  - the same id with a different payload gets `submission_mismatch`
+  - a different id gets `already_submitted`
+  - the loser of two concurrent same-id requests gets the committed receipt
+  - receipts never match across invitations
+  - a frozen plan with an unsupported kind gets `unsupported_plan`
+  - the tenant lookup carries `no-store`
   - a concurrent double submit accepts one
   - the household email is sent once, and never includes sensitive answers
   - batch validation for each rule above, persisting nothing on failure
@@ -542,6 +591,16 @@ It must decide retention, who can see the data, and whether identifiers are scop
 | 12 | Branding boundary. | Accepted: asset URL rule, neutral reset; #3 and tenancy guide aligned. **Simplified:** neutral link previews in v1. |
 | 13 | Release scope and studio. | Accepted: v1 kinds gated at publish, "new journey" clarified, studio Angular 22 dependency. |
 | 14 | Readiness record and verification. | Accepted: owners, order, budget, verification matrix, review history. |
+
+### Third review (`c489b6b`)
+
+| # | Finding | Resolution |
+| --- | --- | --- |
+| 1 | Invitation continuity was not enforceable. | Accepted: `journey.id` is unique per invitation and never reused or re-planned. `X-Journey-Id` is also sent on journey loads after reverification. Test for two invitations that share one definition. |
+| 2 | The retry guarantee was incomplete. | Accepted: receipts scoped to the invitation; a retry is the same id plus the same payload; a concurrent loser gets the committed receipt; recovery after an expired session goes through the journey `submitted` state. **Narrowed:** notifications are queued exactly once and delivered at least once. |
+| 3 | The v1 subset was not enforced at runtime. | Accepted: the v1 parser rejects other kinds, blocks and `followUps`; the backend refuses to serve an unsupported plan (`unsupported_plan`). **Decided:** no follow-ups in v1. |
+| 4 | Cache gap after a host switch. | Accepted: the tenant lookup is `no-store` in v1. |
+| 5 | Error envelope mismatch. | Accepted: the backend body unchanged, with `fieldErrors` `{ field, code, message }`, `schemaVersion` on success responses only, and expired or submitted moved into the journey response states. |
 
 ### First review (draft, plan-reviewer)
 
