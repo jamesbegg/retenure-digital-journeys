@@ -2,7 +2,7 @@
   skipLinkLabel()
 }}</a>
 
-@if (showBrand()) {
+@if (showChrome()) {
   <header class="header">
     <ng-content select="[slot=header]" />
   </header>
@@ -40,7 +40,7 @@
   }
 </main>
 
-@if (showBrand()) {
+@if (showChrome()) {
   <footer class="footer">
     <ng-content select="[slot=contact]" />
   </footer>

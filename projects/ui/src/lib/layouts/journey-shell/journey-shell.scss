@@ -39,6 +39,11 @@
   padding-block: var(--ret-space-4);
 }
 
+.header:empty,
+.footer:empty {
+  display: none;
+}
+
 .main {
   flex: 1;
   display: flex;

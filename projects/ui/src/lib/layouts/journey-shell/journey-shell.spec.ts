@@ -10,13 +10,9 @@ const slots = `
   <p slot="contact">Email Helen Hartwell</p>`;
 
 function renderShell(attrs = '', heading = 'Your check-in') {
-  const branding = attrs.includes('branding=') ? '' : 'branding="firm"';
-  return render(
-    `<ret-journey-shell heading="${heading}" ${branding} ${attrs}>${slots}</ret-journey-shell>`,
-    {
-      imports: [JourneyShell],
-    },
-  );
+  return render(`<ret-journey-shell heading="${heading}" ${attrs}>${slots}</ret-journey-shell>`, {
+    imports: [JourneyShell],
+  });
 }
 
 const h1 = (name = 'Your check-in') => screen.getByRole('heading', { level: 1, name });
@@ -54,13 +50,14 @@ describe('JourneyShell', () => {
     h1();
   });
 
-  it('shows no firm header or contact when neutral, whatever the layout', async () => {
-    await renderShell('branding="neutral" layout="with-steps"');
+  it('renders no header or contact landmark when the page projects none, as on the generic error page', async () => {
+    await render(
+      `<ret-journey-shell heading="Something went wrong" layout="centred" state="error"><p>Try again later.</p></ret-journey-shell>`,
+      { imports: [JourneyShell] },
+    );
     expect(screen.queryByRole('banner')).toBeNull();
     expect(screen.queryByRole('contentinfo')).toBeNull();
-    expect(screen.queryByText('Hartwell Wealth')).toBeNull();
-    screen.getByText('Step 2 of 4');
-    h1();
+    screen.getByRole('heading', { level: 1, name: 'Something went wrong' });
   });
 
   it('shows a neutral, busy skeleton with no brand while loading', async () => {
@@ -82,12 +79,6 @@ describe('JourneyShell', () => {
     within(main).getByText('Continue');
     expect(screen.queryByText('Step 2 of 4')).toBeNull();
     within(screen.getByRole('contentinfo')).getByText('Email Helen Hartwell');
-  });
-
-  it('shows the error content on a neutral page with no firm contact', async () => {
-    await renderShell('state="error" branding="neutral"');
-    within(screen.getByRole('main')).getByText('Your plans');
-    expect(screen.queryByRole('contentinfo')).toBeNull();
   });
 
   it('shows a blocked page with heading, content and its action, no steps, keeping the contact', async () => {
@@ -114,7 +105,7 @@ describe('JourneyShell', () => {
 
   async function renderStateful(state: 'ready' | 'error') {
     const { fixture } = await render(JourneyShell, {
-      inputs: { heading: 'We could not save your answers', branding: 'firm', state },
+      inputs: { heading: 'We could not save your answers', state },
     });
     return async (next: string) => {
       fixture.componentRef.setInput('state', next);
@@ -142,18 +133,15 @@ describe('JourneyShell', () => {
 
   it('leaves focus alone on first render', async () => {
     await render(JourneyShell, {
-      inputs: { heading: 'Your check-in', branding: 'firm', state: 'error' },
+      inputs: { heading: 'Your check-in', state: 'error' },
     });
     expect(document.activeElement).toBe(document.body);
   });
 
   it('gives each shell its own main id', async () => {
-    await render(
-      `<ret-journey-shell heading="A" branding="neutral" /><ret-journey-shell heading="B" branding="neutral" />`,
-      {
-        imports: [JourneyShell],
-      },
-    );
+    await render(`<ret-journey-shell heading="A" /><ret-journey-shell heading="B" />`, {
+      imports: [JourneyShell],
+    });
     const [a, b] = screen.getAllByRole('main');
     expect(a.id).not.toBe(b.id);
   });
