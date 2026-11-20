@@ -121,7 +121,7 @@ export class TextField implements ControlValueAccessor, Validator {
 
   protected pasteDate(event: ClipboardEvent) {
     const date = fullDate(event.clipboardData?.getData('text') ?? '');
-    if (!date) return;
+    if (!date || this.readonly()) return;
     event.preventDefault();
     this.date.set(date);
     this.onChange(isoDate(date) ?? '');

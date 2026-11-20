@@ -218,6 +218,7 @@ describe('TextField date', () => {
     ['Month', '14-3-1996'],
     ['Year', '14.03.1996'],
     ['Day', ' 1996-03-14 '],
+    ['Month', '14 03 1996'],
   ])('fills all three parts when a full date is pasted into %s', async (name, pasted) => {
     const { control, part } = await renderDate();
     const user = userEvent.setup();
@@ -225,6 +226,31 @@ describe('TextField date', () => {
     await user.paste(pasted);
     expect(['Day', 'Month', 'Year'].map((n) => part(n).value)).toEqual(['14', '03', '1996']);
     expect(control.value).toBe('1996-03-14');
+  });
+
+  it('pads a one-digit day and month, and flags a pasted date that is not real', async () => {
+    const { control, part, fixture } = await renderDate();
+    const user = userEvent.setup();
+    await user.click(part('Day'));
+    await user.paste('5/3/1962');
+    expect(['Day', 'Month', 'Year'].map((n) => part(n).value)).toEqual(['05', '03', '1962']);
+    expect(control.value).toBe('1962-03-05');
+    await user.click(part('Year'));
+    await user.paste('31/02/1996');
+    await fixture.whenStable();
+    expect(control.value).toBe('');
+    expect(control.errors).toEqual({ invalidDate: true });
+  });
+
+  it('ignores a paste into a read-only date', async () => {
+    const { control } = await renderField({ type: 'date', readonly: true });
+    control.setValue('1990-01-01');
+    const day = screen.getByRole('textbox', { name: 'Day' }) as HTMLInputElement;
+    const user = userEvent.setup();
+    await user.click(day);
+    await user.paste('14/03/1996');
+    expect(control.value).toBe('1990-01-01');
+    expect(day.value).toBe('01');
   });
 
   it('pastes a single part as normal', async () => {
