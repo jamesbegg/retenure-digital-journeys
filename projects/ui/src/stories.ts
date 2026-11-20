@@ -5,9 +5,14 @@ export const stories: Record<string, () => Promise<Type<unknown>>> = {
     import('./lib/composites/action-bar/action-bar.story').then((m) => m.ActionBarStory),
   button: () => import('./lib/primitives/button/button.story').then((m) => m.ButtonStory),
   card: () => import('./lib/composites/card/card.story').then((m) => m.CardStory),
+  'field-messages': () =>
+    import('./lib/primitives/field-messages/field-messages.story').then(
+      (m) => m.FieldMessagesStory,
+    ),
   icon: () => import('./lib/primitives/icon/icon.story').then((m) => m.IconStory),
   'journey-shell': () =>
     import('./lib/layouts/journey-shell/journey-shell.story').then((m) => m.JourneyShellStory),
   'text-field': () =>
     import('./lib/primitives/text-field/text-field.story').then((m) => m.TextFieldStory),
+  'yes-no': () => import('./lib/primitives/yes-no/yes-no.story').then((m) => m.YesNoStory),
 };

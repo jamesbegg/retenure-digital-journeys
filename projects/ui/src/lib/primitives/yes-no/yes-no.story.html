@@ -1,0 +1,15 @@
+<main class="ret-stack">
+  <h1>YesNo</h1>
+  @for (variant of variants.variant | keyvalue: null; track variant.key) {
+    <ret-yes-no [label]="variant.value" [variant]="variant.key" />
+  }
+  <ret-yes-no
+    label="Is this still right?"
+    yesLabel="Still right"
+    noLabel="Something's changed"
+    [formControl]="yes"
+  />
+  <ret-yes-no label="Do you have any care needs?" icon="info" hint="Including help at home" />
+  <ret-yes-no label="Have you moved house?" error="Choose yes or no" />
+  <ret-yes-no label="Disabled" [formControl]="disabled" />
+</main>
