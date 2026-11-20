@@ -8,7 +8,6 @@ import { TextField } from './text-field';
   selector: 'ret-text-field-story',
   imports: [TextField, KeyValuePipe, ReactiveFormsModule],
   templateUrl: './text-field.story.html',
-  styleUrl: './text-field.story.scss',
 })
 export class TextFieldStory {
   protected readonly variants: Variants<TextField> = {

@@ -1,9 +1,9 @@
-<main>
+<main class="ret-stack">
   <h1>Button</h1>
 
   @for (size of variants.size | keyvalue: null; track size.key) {
     <h2>{{ size.value }}</h2>
-    <ul>
+    <ul class="ret-cluster">
       @for (variant of variants.variant | keyvalue: null; track variant.key) {
         <li>
           <ret-button [label]="variant.value" [variant]="variant.key" [size]="size.key" />
@@ -13,7 +13,7 @@
   }
 
   <h2>Icons</h2>
-  <ul>
+  <ul class="ret-cluster">
     <li><ret-button label="Back" icon="arrow-left" variant="secondary" /></li>
     <li><ret-button label="Continue" icon="arrow-right" iconPosition="trailing" /></li>
     <li>
@@ -23,7 +23,7 @@
   </ul>
 
   <h2>States</h2>
-  <ul>
+  <ul class="ret-cluster">
     <li><ret-button [label]="variants.disabled" [disabled]="true" /></li>
     <li><ret-button label="Save" [pending]="true" pendingLabel="Saving your answers" /></li>
     <li>

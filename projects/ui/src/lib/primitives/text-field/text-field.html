@@ -1,17 +1,3 @@
-<ng-template #messages>
-  @if (hint(); as hint) {
-    <p class="hint" [id]="hintId">{{ hint }}</p>
-  }
-  <p class="error" [id]="errorId" aria-live="polite">
-    @if (error(); as error) {
-      <ret-icon name="circle-alert" tone="danger" />
-      <span
-        ><span class="ret-visually-hidden">{{ errorPrefix() }} </span>{{ error }}</span
-      >
-    }
-  </p>
-</ng-template>
-
 @if (type() === 'date') {
   <fieldset
     class="field"
@@ -20,7 +6,12 @@
     [attr.aria-describedby]="describedBy()"
   >
     <legend class="label">{{ label() }}</legend>
-    <ng-container [ngTemplateOutlet]="messages" />
+    <ret-field-messages
+      [fieldId]="id"
+      [hint]="hint()"
+      [error]="error()"
+      [errorPrefix]="errorPrefix()"
+    />
     <div class="date">
       @for (part of parts; track part) {
         <div class="part" [attr.data-part]="part">
@@ -43,7 +34,12 @@
 } @else {
   <div class="field" [attr.data-size]="size()">
     <label class="label" [for]="id">{{ label() }}</label>
-    <ng-container [ngTemplateOutlet]="messages" />
+    <ret-field-messages
+      [fieldId]="id"
+      [hint]="hint()"
+      [error]="error()"
+      [errorPrefix]="errorPrefix()"
+    />
     <div class="control">
       @if (type() === 'money') {
         <span class="prefix" [id]="prefixId">£</span>

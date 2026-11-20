@@ -1,4 +1,4 @@
-<main>
+<main class="ret-stack">
   <h1>Card</h1>
   @for (variant of variants.variant | keyvalue: null; track variant.key) {
     <ret-card [heading]="variant.value" [variant]="variant.key">

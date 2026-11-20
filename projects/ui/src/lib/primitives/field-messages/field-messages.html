@@ -1,0 +1,11 @@
+@if (hint(); as hint) {
+  <p class="hint" [id]="fieldId() + '-hint'">{{ hint }}</p>
+}
+<p class="error" [id]="fieldId() + '-error'" aria-live="polite">
+  @if (error(); as error) {
+    <ret-icon name="circle-alert" tone="danger" />
+    <span
+      ><span class="ret-visually-hidden">{{ errorPrefix() }} </span>{{ error }}</span
+    >
+  }
+</p>

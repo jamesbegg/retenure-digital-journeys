@@ -21,7 +21,6 @@ export const iconNames: Variants<Icon>['name'] = {
   selector: 'ret-icon-story',
   imports: [Icon, KeyValuePipe],
   templateUrl: './icon.story.html',
-  styleUrl: './icon.story.scss',
 })
 export class IconStory {
   protected readonly variants: Variants<Icon> = {

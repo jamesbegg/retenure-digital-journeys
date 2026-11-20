@@ -8,7 +8,6 @@ import { Button } from './button';
   selector: 'ret-button-story',
   imports: [Button, KeyValuePipe],
   templateUrl: './button.story.html',
-  styleUrl: './button.story.scss',
 })
 export class ButtonStory {
   protected readonly variants: Variants<Button> = {
