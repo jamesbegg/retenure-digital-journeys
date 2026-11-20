@@ -74,12 +74,15 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
 - **On success,** the backend creates the session (a new session id, stored server-side and only as a hash), sets the cookie, and returns `SessionResponse`. The app then loads the journey.
 - **On failure,** the backend returns 401 `verification_failed`. The response is the same whether the token or the date was wrong, so nothing leaks.
 - **Expired link, invitation still open (user decision):**
-  - The backend replaces the link and emails the new one to the lead's email address on file, never to anyone else. It answers 409 `link_reissued`.
-  - The page shows "This link has expired, so we've sent a new one to your email". No address is shown, and the date of birth is not checked.
+  - The backend creates an outbound message from the `linkReissue` template, addressed to the lead's email on file and never to anyone else (see Outbound messages).
+  - The template's send mode decides the response, and the date of birth is not checked:
+    - **`auto`** (the pilot setting): the link is replaced and sent. The backend answers 409 `link_reissued`, and the page says "This link has expired, so we've sent a new one to your email".
+    - **`approval`:** the request waits for the adviser in the studio. The backend answers 409 `link_requested`, and the page says "This link has expired. We've let <firm name> know, and they'll send you a new one".
+    - Neither message shows the address.
   - This happens only on Continue (a `POST`), never on page load, so an email scanner opening an old message cannot trigger it.
   - There is at most one reissue per invitation per 24 hours. Within that window, the same response is shown but nothing is sent, so the inbox cannot be flooded.
     - **Tracked on the invitation row as `linkReissuedAt`.**
-    - One transactional write sets `linkReissuedAt`, replaces the token hash and adds the email to the outbox.
+    - One transactional write sets `linkReissuedAt` and creates the outbound message. The token hash is replaced only when the message is actually sent, so an old link keeps its state until the new one exists.
     - The write is conditional on `linkReissuedAt` being absent or older than 24 hours. If the condition fails, nothing is written or sent.
     - So two concurrent presses send one email, and no counter, cache or clean-up job is needed.
   - A forwarded old link therefore never grants access. It only sends the client a fresh link.
@@ -94,6 +97,31 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
 - a Lambda authoriser for `/client/*` checks the session cookie against the session table
 - `/client/tenant` and `/client/verification` are the only public `client` routes
 - those two routes carry the rate limits above
+
+## Outbound messages (backend-owned, extensible)
+
+Every email the platform sends goes through one pipeline. The link reissue is its first template; invitations, reminders, household copies and later fact finds use the same path.
+
+- **Templates are controlled by Retenure.**
+  - Each template has an id, a version, fixed copy with typed variables, a **send mode** (`auto` or `approval`) and a **sender** (`firmIdentity` or `adviserMailbox`).
+  - The mode is set per template by Retenure, so any template or message can move between automatic and approved without code.
+  - Per-firm overrides can be added later as an optional field.
+- **An outbound message** is one record: `tenantId`, `householdId`, `templateId`, `templateVersion`, variables, recipient, `mode` copied from the template when it was created, `requestedBy` (`system`, `adviser` or `clientAction`), and a status:
+  - `auto` starts at `queued`
+  - `approval` starts at `pendingApproval`, then becomes `queued` when the adviser approves, or `rejected`
+  - then `sending`, then `sent` or `failed`
+- **Approval** happens in the studio, on the household. The adviser sees the rendered message and approves or rejects it.
+- **Sending** uses the outbox worker described under Submitting: it leases the record, records the attempt and sends. Delivery is at least once, with the same narrow duplicate window.
+- **Transparency for `auto` messages:**
+  - The copy says it was sent automatically on behalf of the adviser and why ("…because your previous link had expired").
+  - It carries no personal note from the adviser, and no answers or held data.
+  - Every message, automatic or approved, appears on the household's timeline in the studio, marked automatic or approved, so an adviser is never surprised by an email in their name.
+- **Sender:**
+  - `firmIdentity` sends from the firm's verified name and domain (#3).
+  - `adviserMailbox` sends from the adviser's connected mailbox, only when the firm has opted in and the connection is live. Otherwise the message falls back to `firmIdentity`.
+- **Pilot settings:** `linkReissue` is `auto` with `firmIdentity`. The other templates are set when they are built.
+
+The client sees only two outcomes, `link_reissued` or `link_requested`. The rest is the backend's and the studio's.
 
 ## Sessions
 
@@ -198,7 +226,8 @@ type ClientErrorReason =
   | 'unsupported_plan'      // 409 on /client/journey: the frozen plan uses something this client cannot render
   | 'verification_failed'   // 401 on verification: token or date of birth wrong (same response either way)
   | 'verification_locked'   // 403 on verification: too many failures; contact the adviser
-  | 'link_reissued'         // 409 on verification: the link expired and a new one was emailed (or one was sent in the last 24 hours)
+  | 'link_reissued'         // 409 on verification: the link expired; a new one was sent (template mode auto)
+  | 'link_requested'        // 409 on verification: the link expired; the adviser has been asked to send a new one (template mode approval)
   | 'forbidden_origin';     // 403
 ```
 
@@ -569,7 +598,7 @@ It must decide retention, who can see the data, and whether identifiers are scop
 | Owner | Work |
 | --- | --- |
 | Infrastructure (`my-wealth-infra`) | `X-Retenure-Host` set at the edge, the edge secret, alternate domain names and certificates for custom domains, `no-store` passed through |
-| Backend (`my-wealth-backend`) | Host table; the `client` audience, Lambda authoriser, verification with lockout and the session table; the five endpoints; the session, cookie and `Origin` rules; atomic idempotent submission with its outbox; whole-batch validation; the household copy filter; #5 publish checks including the v1 kinds |
+| Backend (`my-wealth-backend`) | The outbound message pipeline (templates with send mode and sender, approval states, outbox worker, timeline entries); host table; the `client` audience, Lambda authoriser, verification with lockout and the session table; the five endpoints; the session, cookie and `Origin` rules; atomic idempotent submission with its outbox; whole-batch validation; the household copy filter; #5 publish checks including the v1 kinds |
 | This repository | Interfaces with fixtures for the two synthetic firms; parsers; `TenantService` and its interceptor; `JourneyService`; RadioGroup `optionErrors`; `QuestionRenderer` for the v1 kinds |
 | Studio | Angular 22 upgrade, then the preview using the shared renderer |
 
@@ -604,7 +633,8 @@ It must decide retention, who can see the data, and whether identifiers are scop
   - the token leaves the address bar after load
   - a wrong date of birth fails without saying which part was wrong
   - five failures lock the invitation
-  - an expired link with an open invitation reissues once per 24 hours, to the address on file, and shows the message
+  - an expired link with an open invitation creates one `linkReissue` message per 24 hours, to the address on file: `auto` sends it and returns `link_reissued`; `approval` holds it for the adviser and returns `link_requested`
+  - an `auto` message states that it was automatic, carries no personal note, and appears on the household timeline
   - an expired link with a submitted or expired invitation reissues nothing
 - **Backend (for its repository):**
   - a replay with the same id and payload returns the receipt
