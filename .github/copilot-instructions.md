@@ -26,7 +26,7 @@ Never run deploy, DNS or certificate commands unless the user's current request 
 3. The tenant theme is applied to `:root` before the first journey screen renders.
 4. The client verifies (code or knowledge check, set by the firm). The session is bound to the tenant id and the journey invitation.
 5. The journey route loads the journey definition and the questions engine output for this client and renders it with shared components.
-6. Answers stay in the page and submit once at the end. Nothing is stored before submit: no drafts, on the server or in the browser. Leaving with unsaved answers asks first.
+6. Answers stay in the page and submit once at the end, as one atomic, retry-safe submission. Nothing is stored before submit: no drafts, on the server or in the browser. In-app exits confirm first; the browser's own leave prompt is best-effort, so copy never promises it.
 
 ## 2) Project structure
 

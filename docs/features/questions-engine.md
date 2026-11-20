@@ -1,8 +1,8 @@
 # Questions engine: client contract, interfaces and renderer
 
-Status: plan-reviewed; decisions confirmed by the user; implementation awaits the user's go-ahead (#6 is a stop point)
+Status: revised after the second review; implementation awaits the user's go-ahead (#6 is a stop point)
 Risk: high (client answers, tenant isolation, the shape every journey depends on)
-Plan review: done (findings below)
+Plan review: two rounds (findings at the end)
 
 Issues: #6 (engine and renderer), with the parts of #3 (branding), #5 (question library) and #7 (journey definition) the client app consumes.
 
@@ -10,103 +10,149 @@ Issues: #6 (engine and renderer), with the parts of #3 (branding), #5 (question 
 
 In scope:
 
-- what `my-wealth-backend` returns to a client's browser and accepts back
-- the TypeScript interfaces this repository parses that into
-- the client pieces that use it: `TenantService`, `JourneyService`, parsers, and a question renderer that builds the form from the payload with the shared validators
+- What `my-wealth-backend` returns to a client's browser and accepts back.
+- The TypeScript interfaces this repository parses that into.
+- The client pieces built on it:
+  - `TenantService` and `JourneyService`
+  - parsers at the boundary
+  - a pure question renderer in `@retenure/ui`
 
 Non-goals:
 
-- **Selection logic.** Which questions a client gets, in what order and why, is the backend engine (#6 pipeline). The client renders a frozen plan and never decides what to ask.
-- **Storing or editing the question library** (#5, #7). No question sets live in this repository.
-- **Verification screens** (code or date-of-birth check). The session they produce is assumed here.
-- **Applying the theme** beyond its payload. That is #3, planned alongside this and built separately.
+- **Selection logic.** The backend engine (#6 pipeline) decides which questions a client gets. The client renders a frozen plan and never decides what to ask. No question sets live in this repository.
+- **Storing or editing the question library** (#5, #7).
+- **Verification screens.** They are a separate deliverable, but the identity and session they produce are a dependency of this one (see Sessions).
+- **Branded link previews.** In v1 they are neutral (see Branding).
+- **Drafts and save-and-come-back.** Answers are submitted once. Drafts can be added later if drop-out data shows a need.
+- **Several hosts per firm, and redirects between them.** Deferred to #3.
 
 ## Principles
 
-1. **The backend sends a resolved, frozen snapshot.** The journey payload contains everything needed to render: sections, the questions on each card at their frozen versions, client details, held data and copy. The client never fetches the library and never resolves ids.
-2. **The firm comes from the host.**
-   - The app looks the tenant up from the host once and sends `X-Tenant-Id` on every call (the tenancy canon's interceptor).
-   - The backend checks that header against the host and against the session's tenant, and refuses on any mismatch.
-   - The journey comes from the session. The app never sends a journey id it read from a URL parameter or from storage.
-3. **Adviser-only data never reaches the browser.** No selection reasons, suppressed questions, rule ids, other households, or answers marked for the adviser.
-4. **Discriminated unions where things vary.** Questions vary on `kind`, blocks on `type`, validators on `rule`, and an answer follows its question's `kind`. A new variant is a compile error until it has a case.
-5. **Parse at the boundary.**
-   - Responses are `unknown` until a parser in `src/app/api/` turns them into these types.
-   - A payload that fails to parse, or whose `schemaVersion` the client does not know, shows the generic error page.
-   - The failure is logged by id only, never with answer values.
-6. **No compatibility layer before launch.** Nothing is live (AGENTS.md), so backend and client ship schema changes together. Revisit at launch.
+1. **Frozen snapshot.** The journey payload holds everything needed to render: sections, the questions on each card at their frozen versions, client details, held data and UI copy. The client never fetches the library and never resolves ids.
+2. **Firm from the host, journey from the session.** The client never sends a tenant id or journey id it read from a URL parameter or from storage. The backend refuses any request whose firm, invitation or journey disagree.
+3. **Adviser-only data never reaches the browser.** No selection reasons, suppressed questions, rule ids, library ids, other households, or answers marked for the adviser.
+4. **Discriminated unions wherever things vary.** Questions vary on `kind`, blocks on `type`, validators on `rule`, and an answer follows its question's `kind`. A new variant is a compile error until it has a case.
+5. **Parse at the boundary.** Responses are `unknown` until a parser in `src/app/api/` narrows them. An unknown `kind`, `type`, `rule` or `schemaVersion` shows the generic error page and is logged by id only, never with answer values.
+6. **No compatibility layer before launch.** Nothing is live, so the backend and client ship schema changes together. The backend sends only what the released client renders (see Release scope).
+7. **Follow the backend's conventions** for errors, status codes, routes and validation (backend canon sections 7 and 12).
 
-## Hosts and firms
+## Hosts and firms (v1)
 
-One deployment serves every host. The app has no per-firm routes, builds or config: it asks `GET /public/tenant` once, and the backend answers from the `Host` header.
+- **One host per firm.** It is either `<slug>.retenure.io` or the firm's verified custom domain, never both. The backend's host table maps each host to its firm.
+  - Hostnames are stored lowercase, without a port, and unique across all firms.
+  - Adding or switching a host is a row change, not a deploy.
+  - Switching a firm to its custom domain leaves the old host unknown, which shows the generic page. Redirects come later with #3.
+- **One deployment and one set of app routes for every host.** No firm has its own routes, builds or config.
+- **The edge decides which host the backend sees.**
+  - CloudFront strips the viewer's `Host` before the API origin.
+  - So the edge sets the viewer's hostname in its own header, `X-Retenure-Host`, and overwrites any value the browser sent.
+  - The API origin accepts requests only from the edge, through a shared secret header the edge adds.
+  - The backend reads the host only from `X-Retenure-Host`, and only on requests that carry that secret.
+- **A custom domain goes live only when it is fully ready:**
+  - its TXT record is verified (#3)
+  - it is added to the distribution's alternate domain names
+  - its certificate is issued
+  - only then is its row set to `active`
+- **Unknown, pending or suspended host:** the generic error page.
 
-- **Host table (backend).** Each row holds `host`, `tenantId`, `canonical`, `status` (`pending` until DNS verification, then `active` or `suspended`), and `verifiedAt`. A firm can have several hosts, for example `hartwell.retenure.io` and `checkin.hartwellwealth.co.uk`. Adding a host is a new row, not a deploy.
-- **One canonical host per firm.**
-  - Invitation emails, links and `og:` tags always use the canonical host.
-  - A request to a firm's non-canonical host is answered with a 301 to the same path on the canonical host. This sends the subdomain to the firm's own domain, never the other way (`docs/agentic-memory.md`).
-  - Each host is its own origin, so a session cookie on one host is never sent to another. Keeping clients on one host avoids a second verification.
-- **Edge.**
-  - All hosts reach the same origin. `*.retenure.io` has a wildcard certificate.
-  - A custom domain is a CNAME to the shared target (for example `custom.retenure.io`). Its certificate is issued only after the firm's TXT record verifies, as #3 sets out.
-  - The CDN cache key includes the host.
-- **Unknown, pending or suspended host.** `GET /public/tenant` answers 404 `unknownHost`, and the app shows the generic error page.
+## Sessions
+
+These are client sessions: invitation-based, with no account and no Cognito user (see Unresolved and blocking).
+
+**Cookie and requests:**
+- One host-only cookie: `__Host-ret_session`, `Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/`, no `Domain`.
+- The session is bound to one firm, one household, one invitation and one journey.
+- Every `POST` requires:
+  - `Content-Type: application/json`
+  - an `Origin` exactly equal to `https://` plus the viewer host. No port is allowed; anything else gets 403.
+
+**Headers the client sends:**
+- `X-Tenant-Id`, from `TenantService`, on every call except `GET /client/tenant`, which is how the client learns it.
+- `X-Journey-Id`, from the loaded journey, on renewal and submit.
+
+The backend checks both headers against the host and the session, and answers 409 `journey_mismatch` on any difference.
+
+**Timing (WCAG 2.2.1):**
+- The idle limit is 30 minutes. There is no absolute cap.
+- The server is the clock. `GET /client/journey` and every renewal return `expiresAt`, the server's idle deadline, and the client schedules everything from it.
+- **Active clients extend quietly.** On interaction (typing, choosing, moving between sections), the client renews in the background when less than 25 minutes remain, so at most once every 5 minutes. An active client never sees a warning.
+- **Idle tabs warn.** Two minutes before `expiresAt`, the client shows a warning with "I need more time", which renews. Two minutes is well over WCAG's 20 seconds, and renewals are unlimited, well over its 10 extensions.
+- **When the timer may have slipped**, the client checks it again rather than trusting it:
+  - When a tab wakes up (`visibilitychange`), the client compares the clock with `expiresAt` before showing anything.
+  - If a renewal fails, the client retries once. If `expiresAt` has passed, it treats the session as expired.
+- **Expired:**
+  - The page hides the journey: no answers or held facts stay on screen.
+  - The page shows the verification step. Answers stay in memory only.
+  - Reverification must return the same tenant, invitation, journey id and plan. Then the client shows the answers again and lets the client continue or submit.
+  - If any of those differ, the client discards the answers and loads the new journey fresh.
+  - Nothing is lost while the tab stays open, and nothing sensitive stays visible while it is unattended.
 
 ## Endpoints
 
-All endpoints are under `/api/v1`, same origin, JSON, and every response carries `schemaVersion: 1`.
+These follow the backend canon: Lambda handlers, a new `client` audience, singular route segments, and responses through `jsonResponse()` and `handleError()`.
 
-| Method and path | Returns | Notes |
+| Method and path | Success | Notes |
 | --- | --- | --- |
-| `GET /public/tenant` | `TenantResponse` | Tenant from the `Host` header. Branding only. 404 for an unknown, unverified or suspended host. |
-| `GET /journey` | `JourneyResponse` | The session's journey. |
-| `POST /journey/session` | 204 | Extends the session. Called quietly when the client is active, or when an idle client chooses "I need more time". |
-| `POST /journey/submit` | `SubmitResult` | Body `SubmitBody`: every answer, once, at the end. |
+| `GET /client/tenant` | 200 `TenantResponse` | Firm from `X-Retenure-Host`. Branding only. Cached per host at the edge. |
+| `GET /client/journey` | 200 `JourneyResponse` | The session's journey. `Cache-Control: no-store, private`. |
+| `POST /client/journey/session` | 200 `SessionResponse` | Body `{}`. Renews the session and returns the new `expiresAt`. |
+| `POST /client/journey/submission` | 200 `SubmissionReceipt` | Body `SubmissionBody`. Validates the whole batch, accepts it atomically, and is safe to retry. |
 
-**No drafts.** Answers stay in the page until Submit, and nothing is stored before then, on the server or in the browser (user decision). A refresh or closed tab loses unsent answers, so the page asks before leaving. Drafts can be added later if drop-out data shows a need.
+Every JSON response carries `schemaVersion: 1`. Every response from these endpoints, success or error, has `Cache-Control: no-store, private`, except the tenant lookup.
 
-`questionId` is always the plan instance id (see Questions).
+### Submitting
 
-**Session and request rules:**
-- Auth is a host-only `__Host-` session cookie: `Secure`, `HttpOnly`, `SameSite=Strict`, no `Domain` attribute. Every `*.retenure.io` firm counts as the same site, so `SameSite` alone does not stop one firm's subdomain sending forged writes. That is why the next two rules exist.
-- `POST` requests require `Content-Type: application/json` and an `Origin` header equal to the request host. Anything else gets 403.
-- `GET /journey` and every write respond with `Cache-Control: no-store, private`. The CDN key includes only the host, so a cached journey would reach another household of the same firm.
-- `GET /public/tenant` may be cached per host.
-
-**Session timing (WCAG 2.2.1):**
-- **Idle limit:** 30 minutes, plus an absolute cap of 4 hours however active the client is.
-- **Activity extends it quietly.** Any interaction (typing, choosing, moving between sections) calls `POST /journey/session` in the background, at most once every 5 minutes. An active client never sees a warning.
-- **Only an idle tab warns.** After about 28 minutes with no activity, the app shows a warning with "I need more time", which also calls `POST /journey/session`. A refresh on a timer is ruled out: it would keep an unattended tab on a shared device open forever.
-- **Nothing is lost if it lapses.** If the session has ended by the time the client submits, the backend answers 401 `sessionExpired`; the client verifies again and resubmits the answers still held in memory. The timeout controls security, not data loss.
+- **Retry-safe.** The client generates `submissionId` (a UUID) once for each submission attempt, and keeps it in memory when it retries after a network failure.
+  - The same `submissionId` again returns the original `SubmissionReceipt` with 200, so a lost response can be recovered.
+  - A different `submissionId` after the journey was accepted gets 409 `already_submitted`, with the original `submittedAt`. That could be another tab, or a submit that was lost and then tried again.
+- **Atomic.** One transaction stores the answers, the receipt keyed by `submissionId`, and the invitation's move to `submitted`, conditional on the invitation still being open.
+- **Household copy and adviser notification are sent once.** The same transaction writes an outbox marker, which a worker sends once. It never sends from the request handler.
+- **The household copy never includes answers marked sensitive** (#5). Those reach the adviser only. The copy goes only to members the backend holds a verified email for.
+- **The whole batch is validated against the frozen plan.** On any failure, the backend stores nothing, the invitation stays open, and it answers 400 with `fieldErrors` keyed by question id:
+  - every `questionId` exists in the plan, appears once, and its `questionVersion` matches
+  - each answer's `kind` matches its question's
+  - option values, option-detail fields and fact ids belong to that question
+  - the wire formats are right (money, ISO date, booleans)
+  - every required question on an open branch is answered
+  - the declared validators pass, applied by the same rules as the shared client validators
+  - follow-up branches are evaluated from the submitted parent answers, including nested follow-ups, and an answer on a closed branch is rejected
+  - an optional question left blank is simply absent from the batch
 
 ### Errors
 
-Every non-2xx response has this body:
+The backend's shared body:
 
 ```ts
 interface ApiError {
-  code:
-    | 'unknownHost'       // 404 on /public/tenant
-    | 'tenantMismatch'    // 409: host, X-Tenant-Id and session disagree
-    | 'sessionExpired'    // 401: verify again, then resubmit
-    | 'expired'           // 410: the invitation has passed its date
-    | 'submitted'         // 410: already submitted
-    | 'invalidAnswer'     // 422: kind mismatch, unknown question, stale version, closed follow-up branch
-    | 'missingAnswers'    // 422 on submit: required answers absent
-    | 'forbidden';        // 403: Origin or content-type check failed
-  questionIds?: string[];
-  adviser?: AdviserContact;   // on 'expired' and 'submitted', so the calm page can show the email
+  error: string;
+  statusCode: number;
+  message: string;               // safe, never shown to the client verbatim
+  requestId: string;
+  fieldErrors?: { questionId: string; reason: string }[];
+  reason?: ClientErrorReason;
+  adviser?: AdviserContact;      // on 'invitation_expired' and 'already_submitted'
+  submittedAt?: string;          // on 'already_submitted'
 }
+
+type ClientErrorReason =
+  | 'unknown_host'          // 404 on /client/tenant
+  | 'journey_mismatch'      // 409: host, X-Tenant-Id, X-Journey-Id and session disagree
+  | 'session_expired'       // 401
+  | 'invitation_expired'    // 409
+  | 'already_submitted'     // 409
+  | 'invalid_submission'    // 400 with fieldErrors
+  | 'forbidden_origin';     // 403
 ```
 
 ## Interfaces
 
-These go in `interfaces/` folders, which hold types only (enforced by lint):
-- `projects/ui/src/lib/interfaces/`: what the shared renderer needs (question, answer, copy), so the studio preview gets it too.
-- `src/app/interfaces/`: app-only types (responses, errors, session).
+All of these go in `interfaces/` folders, which hold types only:
+- **`projects/ui/src/lib/interfaces/`** for what the shared renderer needs: question, answer and copy types.
+- **`src/app/interfaces/`** for app-only types: responses, errors and the session.
 
-### Tenant (branding)
+### Tenant and branding
 
-This shape supersedes the draft `TenantTheme` in #3. #3 drops `adviserContactDefaults`, because the adviser comes with the journey.
+This shape supersedes #3's draft, and the tenancy guide is updated to match.
 
 ```ts
 interface TenantResponse {
@@ -116,11 +162,11 @@ interface TenantResponse {
 
 interface TenantTheme {
   tenantId: string;
-  displayName: string;                 // "Hartwell Wealth"; also the page title and og:site_name
-  logo: { src: string; alt: string };  // tenant-prefixed path, same origin
+  displayName: string;                 // "Hartwell Wealth"; also the page title
+  logo: { src: string; alt: string };
   favicon: string;
   colours: { light: BrandColours; dark: BrandColours };
-  font?: { family: string; src: string };  // self-hosted woff2; system stack when absent
+  font?: { family: string; src: string };   // self-hosted woff2; system stack when absent
 }
 
 interface BrandColours {
@@ -129,7 +175,10 @@ interface BrandColours {
 }
 ```
 
-Applied once at start-up to the `--ret-brand-*` tokens on `:root`, before the first branded render. A new brand slot is an optional field and one token.
+- **Asset URLs.** `logo.src`, `favicon` and `font.src` must be same-origin paths under `/t/<tenantId>/`. The parser rejects any other value, including other hosts, `data:` URLs and another tenant's prefix.
+- **Applying the theme.** Applied once at start-up, before the first branded render, to the `--ret-brand-*` tokens, the page title and the favicon.
+- **Neutral failure.** On any tenant or journey failure, the client resets the title, favicon, tokens and all in-memory client state to neutral before showing the generic page.
+- **Link previews in v1 are neutral.** The static shell's `og:` tags say "Your check-in" with no firm name, because crawlers do not run the app. Branded previews need server rendering and come later.
 
 ### Journey
 
@@ -140,6 +189,12 @@ interface JourneyResponse {
   client: ClientInfo;
   adviser: AdviserContact;
   sections: Section[];
+  expiresAt: string;           // server idle deadline
+}
+
+interface SessionResponse {
+  schemaVersion: 1;
+  expiresAt: string;
 }
 
 interface JourneyMeta {
@@ -147,25 +202,28 @@ interface JourneyMeta {
   type: 'annualCheckIn' | 'pulse' | 'followUp' | 'onboarding';
   title: string;               // "Your annual check-in"
   estimatedMinutes: number;
-  expiresAt: string;           // ISO date-time
   copy: JourneyCopy;
-  ending: { doneMessage: string; copyToHousehold: boolean };
+  ending: { doneMessage: string };
 }
 
-interface JourneyCopy {        // every UI string the components take as input, in one place
-  continue: string;            // "Continue"
+interface JourneyCopy {        // every UI string the components take as input
+  continue: string;
   back: string;
   edit: string;
-  saveAndFinishLater: string;
-  checkAnswersTitle: string;   // "Check your answers"
   submit: string;
+  submitting: string;          // Button pendingLabel
+  checkAnswersTitle: string;
   required: string;            // "Answer this question to continue"
   errorPrefix: string;         // "Error:"
   dateLabels: { day: string; month: string; year: string };
-  incompleteDate: string;      // "Enter a day, month and year"
-  invalidDate: string;         // "Enter a real date"
-  stillRight: string;          // ConfirmItem labels
+  incompleteDate: string;
+  invalidDate: string;
+  stillRight: string;
   somethingChanged: string;
+  leaveWarning: string;        // "If you leave, your answers will not be saved"
+  timeoutWarning: string;      // "You've been inactive. Do you need more time?"
+  moreTime: string;            // "I need more time"
+  followUpsCleared: string;    // announced when a No closes follow-ups
 }
 
 interface ClientInfo {
@@ -193,26 +251,25 @@ interface Section {
   id: string;
   title: string;               // the screen's h1
   intro?: string;              // one line at most
-  blocks: Block[];
+  blocks: Block[];             // at least one; a section with no card has no Continue gating
 }
 
 type Block =
-  | { type: 'card'; question: Question }                       // one card; follow-ups stay on it
+  | { type: 'card'; question: Question }
   | { type: 'notice'; tone: 'info' | 'warning'; text: string }
-  | { type: 'facts'; title: string; facts: HeldFact[] };       // read-only, e.g. "What we hold"
+  | { type: 'facts'; title: string; facts: HeldFact[] };
 ```
 
-"Check your answers" is not a section. The client adds it after the last section, builds the summary from the definitions and answers, and links each Edit back to its section and card.
+"Check your answers" is added by the client after the last section. It is built from the definitions and the in-memory answers, and each Edit links back to its section and card.
 
 ### Questions
 
 ```ts
 interface QuestionBase {
   id: string;                  // plan instance id, unique within the journey; the answer key
-  libraryId: string;           // the library question (#5), for the adviser's view and audit
   version: number;             // frozen at send
-  personId?: string;           // set when asked per person ("For Tom: ..."); a ClientInfo member id
-  prompt: string;              // the label or legend, plain language
+  personId?: string;           // asked about one household member (a ClientInfo member id)
+  prompt: string;
   hint?: string;
   required: boolean;
   validators?: ValidatorRef[];
@@ -221,7 +278,7 @@ interface QuestionBase {
 
 interface FollowUp {
   when: AnswerMatch;
-  questions: Question[];       // on the same card; their answers are cleared when `when` stops matching
+  questions: Question[];       // same card; answers cleared when `when` stops matching
 }
 
 type AnswerMatch =
@@ -239,11 +296,11 @@ type Question =
   | (QuestionBase & { kind: 'confirmFacts'; facts: HeldFact[] })
   | (QuestionBase & { kind: 'goals'; goals: string[] });
 
-interface QuestionOption {     // RadioOption from @retenure/ui, plus validators on its input
+interface QuestionOption {
   value: string;
   label: string;
   hint?: string;
-  input?: { label: string; type: 'text' | 'money' | 'multiline'; validators?: ValidatorRef[] };
+  input?: { label: string; type: 'text' | 'money' | 'multiline'; required: boolean; validators?: ValidatorRef[] };
 }
 
 interface HeldFact {
@@ -254,39 +311,20 @@ interface HeldFact {
 }
 ```
 
-How each `kind` is rendered follows the journey-ux rules:
-- `yesNo` → YesNo
-- `radio` → RadioGroup (three or more options)
-- `checkbox` → CheckboxGroup
-- `text`, `email`, `tel`, `money`, `date` → TextField
-- `confirmFacts` and `goals` → FactCard and ConfirmItem
-
-A `kind` sets the control and the keyboard only. All validation comes from `required` and `validators`, so there is one mechanism.
+`libraryId` stays on the backend: it is for the adviser's audit view, and the client has no use for it.
 
 ### Validators
-
-Named references to the shared validators in `@retenure/ui`. The messages are keyed by the reason each validator reports, so the copy stays with the question:
 
 ```ts
 type ValidatorRef =
   | { rule: 'emailAddress'; message: string }
   | { rule: 'ukPhone'; message: string }
   | { rule: 'personName'; message: string }
-  | {
-      rule: 'dateOfBirth';
-      minAge?: number;
-      maxAge?: number;
-      messages: { future: string; tooYoung: string; tooOld: string };
-    }
-  | {
-      rule: 'moneyAmount';
-      min?: number;
-      max?: number;
-      messages: { unreadable: string; tooLow: string; tooHigh: string };
-    };
+  | { rule: 'dateOfBirth'; minAge?: number; maxAge?: number;
+      messages: { future: string; tooYoung: string; tooOld: string } }
+  | { rule: 'moneyAmount'; min?: number; max?: number;
+      messages: { unreadable: string; tooLow: string; tooHigh: string } };
 ```
-
-Missing-answer, incomplete-date and invalid-date messages come from `JourneyMeta.copy`.
 
 ### Answers
 
@@ -295,191 +333,216 @@ type AnswerValue =
   | { kind: 'yesNo'; value: boolean }
   | { kind: 'radio'; value: string; input?: string }
   | { kind: 'checkbox'; values: string[]; inputs?: Record<string, string> }
-  | { kind: 'text' | 'email' | 'tel'; value: string }
-  | { kind: 'money'; value: string }        // pounds as a decimal string, no symbol or commas: "1250.50"
-  | { kind: 'date'; value: string }         // ISO YYYY-MM-DD; an incomplete date is never sent
+  | { kind: 'text' | 'email' | 'tel'; value: string }       // trimmed
+  | { kind: 'money'; value: string }                         // "1250.50": pounds, no symbol or commas
+  | { kind: 'date'; value: string }                          // ISO YYYY-MM-DD
   | { kind: 'confirmFacts'; changed: { factId: string; newValue: string }[] }   // empty: all still right
-  | { kind: 'goals'; changes?: string };    // absent: still right
+  | { kind: 'goals'; changes?: string };                     // absent: still right
 
-interface SubmittedAnswer {
-  questionId: string;          // plan instance id
-  questionVersion: number;
-  answer: AnswerValue;
+interface SubmissionBody {
+  submissionId: string;
+  answers: { questionId: string; questionVersion: number; answer: AnswerValue }[];
 }
 
-interface SubmitBody {
-  answers: SubmittedAnswer[];  // open branches only; closed follow-ups are left out
+interface SubmissionReceipt {
+  schemaVersion: 1;
+  submissionId: string;
+  submittedAt: string;
 }
-
-interface SubmitResult { submittedAt: string }
 ```
 
-These shapes match what the shared components already emit:
-- YesNo emits a `boolean`.
-- RadioGroup emits `{ value, input? }`.
-- TextField emits money as a plain decimal string and a date as ISO.
+### Per-kind rules (client and backend)
 
-The backend answers 422 `invalidAnswer` if an answer's `kind` differs from its question's, the question is unknown, the version is stale, or the answer belongs to a follow-up whose branch is closed.
+| Kind | Built in, always on | Configured per question | Counts as answered |
+| --- | --- | --- | --- |
+| `yesNo` | none | `required` | `true` or `false` |
+| `radio` | the option exists; an option input is checked by its own `required` and validators, and its error shows on that input | `required` | an option is chosen, and its required input, if any, is valid |
+| `checkbox` | the options exist | `required` | at least one option is selected |
+| `text`, `email`, `tel` | the value is trimmed | `required`, validators | non-empty after trimming |
+| `money` | TextField emits a readable amount or the raw text; `moneyAmount` is attached automatically to report unreadable text | `required`, `moneyAmount` min and max | a readable amount |
+| `date` | TextField's `incompleteDate` and `invalidDate` | `required`, `dateOfBirth` | a complete, real date |
+| `confirmFacts` | none | none (always required) | the client chose Still right, or Something's changed and entered the change |
+| `goals` | none | none (always required) | the same |
 
-**At submit**, the backend runs the same `AnswerMatch` checks:
-- It drops any answer whose branch is closed.
-- It refuses with `missingAnswers` if a required answer on an open branch is absent.
+- **An optional question left blank** is not in the batch, and its card still counts as complete for Continue.
+- **Change to RadioGroup:** it gains an `optionErrors` input (`Record<value, string>`) and passes the error to the revealed TextField. It is a small, typed addition to the shared component.
 
 ## Client pieces
 
 ```text
-app start    ─▶ TenantService.load()      GET /public/tenant ─▶ theme on :root │ 404 ─▶ generic error page
-route        ─▶ JourneyService.load()     GET /journey ─▶ parse ─▶ signals       │ error ─▶ page for its code
-section      ─▶ QuestionRenderer          section + answers in; answersChange / complete out
-answersChange─▶ JourneyService            answers held in a signal, in memory only
-check answers─▶ JourneyService.submit()   POST { answers } ─▶ done screen
+start         ─▶ TenantService.load()        GET /client/tenant ─▶ theme │ fail ─▶ neutral reset, generic page
+route         ─▶ JourneyService.load()       GET /client/journey ─▶ parse ─▶ signals, expiresAt
+section       ─▶ QuestionRenderer            section, answers, copy, members in; answersChange, complete out
+answersChange ─▶ JourneyService              replaces that section's answer map in memory
+activity      ─▶ JourneyService.renew()      POST /session when < 25 min left; idle warning from expiresAt
+check answers ─▶ JourneyService.submit()     POST /submission { submissionId, answers } ─▶ done
 ```
 
-- **`TenantService`** (`src/app/tenant/`, #3) makes one call, applies the theme, and holds `tenantId` for the `X-Tenant-Id` header.
+- **`TenantService`** (`src/app/tenant/`, #3): looks the firm up once, applies the theme, and supplies `X-Tenant-Id`. It resets everything on a neutral failure.
 - **`JourneyService`** (`src/app/journey/`):
-  - Holds the journey state as signals and does the HTTP.
-  - Holds answers in memory only, and asks before the page is left with unsent answers.
-  - Extends the session quietly on activity (throttled), and shows the timeout warning only when the tab is idle.
-  - Shows the screen state through JourneyShell's `state` (`loading`, `ready`, `error`, `blocked`).
-- **Parsers** (`src/app/api/`): one per response. They reject an unknown `kind`, `type`, `rule` or `schemaVersion`.
-- **`QuestionRenderer`** is a pure component:
-  - Inputs: `section`, `answers`, `copy`, `members`.
-  - Outputs: `answersChange` (the full answer map for the section, with closed follow-ups removed) and `complete`.
-  - It never calls a service, so the studio preview can use it with no backend.
-  - It uses an exhaustive `switch` on `kind` and builds one `FormControl` per question, with `Validators.required` and the shared validators attached by `rule`.
-  - It opens follow-ups when their `AnswerMatch` holds, and clears their answers when it stops.
-  - It applies the progressive-disclosure rules (#35, journey-ux).
+  - answers held in memory only
+  - session timing from the server's `expiresAt`
+  - `submissionId` kept across retries
+  - the leave prompt
+  - JourneyShell `state` (`loading`, `ready`, `error`, `blocked`)
+- **Parsers** (`src/app/api/`): one per response, failing closed.
+- **`QuestionRenderer`** (`@retenure/ui`):
+  - A pure component: inputs and outputs, no services, so the studio preview reuses it.
+  - An exhaustive `switch` on `kind`.
+  - One `FormControl` per question, with the per-kind rules above.
+  - Follow-ups open on their `AnswerMatch`. When a branch closes, the renderer clears its answers, emits the section map without them, and announces `copy.followUpsCleared`.
+
+**Leaving the page (best-effort):**
+- The browser's own prompt runs when there are unsent answers. Browsers may suppress it, so the copy never promises it.
+- The first section says once, in plain words, that answers are sent only at the end.
+- The in-app exits are guarded with a confirm: Back from the first section, and following the adviser email link.
+
+**Screen-level behaviour belongs to the design gate for journey screens and QuestionCard (#35).** Journey screens are a stop point, so these are not specified here:
+- focus after Continue, Edit and errors
+- how Check your answers reflects an edit
+- content-only sections
+- the submit-pending state
+- the timeout dialog's layout
+- 320 px with 200% text, and keyboard and screen-reader passes
+
+## Release scope
+
+- **v1 kinds:** `yesNo`, `radio`, `text`, `email`, `tel`, `money` and `date`, which today's components cover. The backend must not put any other kind in a v1 client's plan; the publish check (#5) enforces this until the remaining components ship.
+- **Later, together with their components:** `checkbox` (#16), `confirmFacts` and `goals` (#31, #32), the `notice` block (#23), and QuestionCard (#35) for follow-ups.
+- **"New journey" means new data.** A new configuration of an existing `JourneyMeta.type` is backend data only. A new `type` value is a code change.
+- **Studio preview depends on an upgrade.** The studio is on Angular 20, and `@retenure/ui` needs Angular 22. The studio upgrades to Angular 22 first; Angular 20 reaches end of life this month. Preview parity is not deliverable until then.
 
 ## Extensibility
 
 | Change | What it takes |
 | --- | --- |
-| New section, card, copy, or question of an existing kind | Backend data only. No client release. |
-| Same question per household member | Two plan instances with `personId`. Backend data only. |
-| New brand slot or client field | Optional field, ignored until used. |
-| New question `kind`, block `type` or validator `rule` | Union member, component variant if needed, renderer and parser case, in one change across backend and client. |
-| New journey type | Backend data (#7) if it uses existing kinds and blocks. |
+| New section, card, copy or question of a released kind | Backend data only. |
+| Same question for each household member | Plan instances with `personId`. Backend data. |
+| New brand slot or client field | An optional field. |
+| New question `kind`, block `type` or validator `rule` | A union member, a component variant if needed, and the renderer, parser and backend validation, in one change. |
 
 ## Security and ownership boundaries
 
-- Tenant from host; journey from session; `X-Tenant-Id` checked, never trusted alone.
-- `__Host-` cookie, `Origin` and content-type checks on writes, and `no-store` on journey responses.
-- Answers are never logged, put in a URL or sent to analytics; logs use question ids and outcomes only.
-- Payload minimisation: first names only; held facts for the client's own household only; no reasons or suppressed list.
-- Prompts, hints and fact values render as text, never as HTML.
-- Nothing is stored before submit. Answers from closed follow-ups are left out by the client and rejected again by the backend.
+- Firm from the edge-set host; journey from the session; `X-Tenant-Id` and `X-Journey-Id` are cross-checked, never trusted alone.
+- A `__Host-` cookie with `Path=/`, an exact `Origin` match on `POST`, and `no-store` on every client response except the tenant lookup.
+- Answers are never logged, put in a URL or sent to analytics. Logs use ids and outcomes only.
+- First names only; held facts are for the client's own household; no `libraryId`, reasons or suppressed list.
+- Prompts, hints and fact values render as text, never as HTML. Asset URLs must be under the tenant's own prefix.
+- Sensitive answers never go into the household copy.
+- An expired session hides the journey. A mismatched reverification discards the in-memory answers.
 
 ## Failure behaviour
 
-| Code or situation | Client behaviour |
+| Outcome | Client behaviour |
 | --- | --- |
-| `unknownHost`, `tenantMismatch`, tenant lookup fails | Generic error page, no branding. |
-| Journey cannot be fetched or parsed | Generic error page. |
-| `sessionExpired` | Verification step, then resubmit the answers held in memory. |
-| `expired`, `submitted` | A calm, branded page with the adviser's email from `ApiError.adviser`. |
-| Submit fails (network) | Stay on Check your answers with a retry; the answers are still in memory. |
-| Client leaves with unsent answers | The browser asks to confirm. |
-| `missingAnswers`, `invalidAnswer` | Take the client to the first listed question with its message. |
+| `unknown_host`, tenant lookup fails | Neutral reset, then the generic error page. |
+| Journey fetch or parse fails, `journey_mismatch` | Neutral reset, in-memory answers discarded, then the generic error page. |
+| `session_expired`, or `expiresAt` passed | Hide the journey and show verification. Same journey: restore the answers. Different journey: discard them. |
+| `invitation_expired` | A calm, branded page with the adviser's email from `ApiError.adviser`. |
+| `already_submitted` with this tab's `submissionId` | It cannot happen: the replay returns the receipt and the client shows the done screen. |
+| `already_submitted` with another id | A calm page: "These answers were already sent on <date>", with the adviser's email. |
+| `invalid_submission` | Go to the first question in `fieldErrors` with its message. If none of them is on screen, stay on Check your answers with a general message. |
+| Submit network failure | Retry with the same `submissionId`. The answers are still in memory. |
 
 ## Decisions
 
 ### Confirmed by the user
 
 - Question sets come from the backend per client; none are stored in the frontend.
-- Branding is set once at start-up from the backend; if the firm or journey cannot be fetched, a generic error page shows.
-- The shared validators are light-touch and attached per question.
-- Submit once at the end, with no drafts. Drafts can come later if drop-out data shows a need.
-- Accepted: the renderer and question types live in `@retenure/ui`; per-person answers come from plan instances with `personId`; this `TenantTheme` supersedes #3's draft.
+- Branding is set once at start-up from the backend; if the firm or journey cannot be fetched, the client sees a generic error page.
+- Submit once at the end, with no drafts.
+- The renderer and question types live in `@retenure/ui`. Per-person answers come from plan instances with `personId`. This `TenantTheme` supersedes #3's draft.
+- The session extends quietly on activity, and only an idle tab warns.
+- Second review, simpler options:
+  - no absolute session cap
+  - one host per firm and no redirects in v1
+  - sensitive answers never go in the household copy
+  - screen-level behaviour belongs to the design gate
+  - neutral link previews in v1
 
-### Follow-up: measuring drop-out
+### Follow-up: measuring drop-out (an ADR first)
 
-The user wants analytics to show where clients drop out. The canon allows no third-party analytics on journey pages without an ADR, because answers are sensitive. The proposal for that ADR:
-- first-party events only, sent to the backend: `journeyOpened`, `sectionReached { sectionId }` and `submitted`
-- each event keyed by tenant and journey, and never carrying an answer value
+The ADR would cover first-party events only:
+- `journeyOpened`, `sectionReached { sectionId }` and `submitted`, keyed by tenant and journey
+- never an answer value
 - reported per firm in the studio
 
-Not built in this piece.
+It must decide retention, who can see the data, and whether identifiers are scoped to the invitation.
 
-### Proposed earlier, now settled
+### Unresolved and blocking (backend owner)
 
-1. ~~Drafts on the server only.~~ Superseded: the user chose submit-once with no drafts.
-2. **The renderer and question types live in `@retenure/ui`,** not `src/app/engine` as the canon says. The studio preview has to render exactly what clients see (#7). The canon would be updated.
-3. **Per-person answers through plan instances with `personId`,** not one answer holding several people.
-4. **This `TenantTheme` supersedes #3's draft.** Colours come in light and dark pairs, and the adviser contact moves to the journey.
-
-### Unresolved and blocking
-
-- **Backend repository access.** `my-wealth-backend` is outside this session. The cross-repo rule says the backend lands first; this contract is the proposal for it.
+1. **Client auth versus the backend canon.** The backend canon requires Cognito on any endpoint that reads or writes user data. Client journeys use an invitation session with no account. The backend must either add the `client` audience to its canon, or put client sessions on Cognito (for example custom auth). This decision blocks the backend work.
+2. **Route namespace.** Confirm `/client/*` as the new audience.
+3. **The edge secret mechanism, decided with infrastructure:** a secret header checked by the backend, or an API Gateway resource policy.
 
 ### Unresolved and non-blocking
 
 - Verification method payloads and screens.
-- Several components must exist before the renderer covers every kind: CheckboxGroup, FactCard, ConfirmItem, QuestionCard and Notice (#16, #31, #32, #35, #23). The first build can cover `yesNo`, `radio`, `text`, `email`, `tel`, `money` and `date` with today's components.
+- The full host lifecycle (several hosts, canonical switch, redirects, cache purge), to be planned in #3.
 
-## Dependency order
+## Ownership, order and budget
 
-1. Backend:
-   - the host table and canonical redirect
-   - the three endpoints with this schema
-   - the cookie, `Origin` and cache rules
-   - #5's publish-time checks
-2. This repo:
-   - the interfaces, with fixtures for the two synthetic firms
-   - the parsers
-   - `TenantService` (#3) with the `X-Tenant-Id` interceptor
-   - `JourneyService`
-3. QuestionCard (#35), then the renderer for the kinds today's components cover.
-4. The remaining components and kinds.
-5. Studio: its preview uses the shared renderer.
+| Owner | Work |
+| --- | --- |
+| Infrastructure (`my-wealth-infra`) | `X-Retenure-Host` set at the edge, the edge secret, alternate domain names and certificates for custom domains, `no-store` passed through |
+| Backend (`my-wealth-backend`) | Host table; the four endpoints; the session, cookie and `Origin` rules; atomic idempotent submission with its outbox; whole-batch validation; the household copy filter; #5 publish checks including the v1 kinds |
+| This repository | Interfaces with fixtures for the two synthetic firms; parsers; `TenantService` and its interceptor; `JourneyService`; RadioGroup `optionErrors`; `QuestionRenderer` for the v1 kinds |
+| Studio | Angular 22 upgrade, then the preview using the shared renderer |
+
+**Order:** infrastructure and backend first. Then this repository's services and renderer. Journey screens go through the design gate, which is a stop point. The studio comes last.
+
+**Budget for this repository:** about 12 files across `src/app/{api,tenant,journey,interfaces}`. Plus one renderer component with its spec and story, interface files in `projects/ui`, and the RadioGroup addition. **Replan** if it needs a production dependency, a new kind, browser storage or a change to an existing component's API beyond `optionErrors`.
 
 ## Verification
 
-- **Parsers:** each response's valid fixture parses; an unknown `kind`, `type`, `rule` or `schemaVersion`, a wrong field type, or a missing field each fails.
+- **Parsers:** each response's valid fixture parses; an unknown `kind`, `type`, `rule` or `schemaVersion`, a foreign asset URL, a wrong type or a missing field each fails.
 - **Renderer:**
-  - each `kind` renders its component
-  - `personId` questions name the person
-  - follow-ups open, and their answers leave `answersChange` when closed
-  - validators attach by `rule`, with the message for each reason
-  - Continue appears only when the screen is complete
+  - each v1 kind renders its component, and `personId` questions name the person
+  - the per-kind completion rules, including optional blanks, `false` and whitespace
+  - an option-input error appears on its field
+  - follow-ups close, clear and announce
 - **`JourneyService`, with HTTP mocked:**
-  - one request in flight per question, latest value wins
-  - submit sends every open answer once
-  - a 401 on submit leads to verification and resubmits the same answers
-  - activity extends the session at most once every 5 minutes, and no warning appears while the client is active
-  - an idle tab shows the warning, and "I need more time" extends the session
-  - no extension is attempted after the absolute cap
-  - leaving with unsent answers asks first
-  - each `ApiError` code reaches its screen
+  - renewal is throttled and scheduled from `expiresAt`, never from a local clock alone
+  - the idle warning appears 2 minutes before the deadline
+  - waking from sleep after the deadline goes to expired
+  - an expired session hides the content; reverifying the same journey restores the answers and a different journey discards them
+  - a retry keeps `submissionId`
+  - each `reason` reaches its outcome
   - no answer values in logs
 - **e2e:**
-  - a synthetic journey on both synthetic firm hosts (tenancy, a11y, zoom)
-  - a `tenantMismatch` gives the generic page
-  - journey responses carry `Cache-Control: no-store`
+  - a synthetic v1 journey on both synthetic firm hosts: tenancy, a11y and zoom (the route list grows from the gallery to journey routes, and the tenancy spec loses `fixme`)
+  - two invitations in one browser on one host: the second does not reuse the first tab's answers
+  - `journey_mismatch` shows the generic page
+  - client responses carry `no-store`
 - **Backend (for its repository):**
-  - each host in the table resolves its tenant
-  - a non-canonical host redirects 301 to the canonical host with the same path
-  - a pending or suspended host gets 404
-  - a write without a matching `Origin` gets 403
-  - a closed-branch answer is dropped at submit
-  - per-person answers never collide
-  - tenant isolation
+  - a replay returns the receipt, and a different id gets `already_submitted`
+  - a concurrent double submit accepts one
+  - the household email is sent once, and never includes sensitive answers
+  - batch validation for each rule above, persisting nothing on failure
+  - `Origin` and edge-secret refusals
+  - a host from another firm never resolves
 
 ## Plan review findings
 
+### Second review (`c8f1673`, Codex)
+
 | # | Finding | Resolution |
 | --- | --- | --- |
-| 1 | Blocker: a withdrawn follow-up's answer stays on the server. | Resolved by removing drafts: nothing is stored before submit, and closed-branch answers are left out by the client and rejected by the backend. |
-| 2 | Blocker: no per-person answers; answers keyed by library id. | Accepted: plan instance `id`, `libraryId`, `personId`. |
-| 3 | No cache rule for journey responses. | Accepted: `Cache-Control: no-store, private`, plus an e2e check. |
-| 4 | CSRF across firm subdomains. | Accepted: `__Host-` cookie, `Origin` and content-type checks. |
-| 5 | Contradicts the tenancy canon (tenant header) and #3's theme. | Accepted: `X-Tenant-Id` header as the canon says; this theme supersedes #3's. |
-| 6 | No adviser email on error pages; conflicts with the user's generic error page. | Accepted: a generic page when the firm or journey cannot be fetched; a calm page with `ApiError.adviser` only for `expired` and `submitted`. |
-| 7 | Error shapes undefined; status codes collide. | Accepted: `ApiError` with one code per case. |
-| 8 | `answersHash` undefined; retries can arrive out of order. | Resolved by removing drafts: there is one submit and nothing to reconcile. |
-| 9 | One message cannot cover several reasons; UI copy has no source. | Accepted: `messages` by reason; `JourneyMeta.copy`. |
-| 10 | Value formats unstated. | Accepted: stated on `AnswerValue` and `AnswerMatch`. |
-| 11 | Option inputs cannot be validated. | Accepted: `validators` on the option input. |
-| 12 | Renderer interface missing. | Accepted: a pure component with inputs and outputs. |
-| 13 | Check your answers and loading unspecified. | Accepted: added by the client; JourneyShell states. |
-| 14 | KISS cuts. | Accepted: dropped `Accept-Schema`, collapsed the card wrapper, `confirmFacts` and `goals` record changes only, one validation mechanism. |
-| 15 | Specs do not trace to the invariants. | Accepted: added to Verification. |
+| 1 | Submit not atomic or retry-safe. | Accepted: `submissionId` receipts, `already_submitted`, one transaction, an outbox email. |
+| 2 | Page not bound to the invitation. | Accepted: `X-Journey-Id`; reverification checks the same journey; an expired session hides the content; a mismatch discards answers. |
+| 3 | Timing not server-confirmed. | Accepted: `expiresAt` from the server, the throttle from it, wake handling. **Simplified:** no absolute cap. Canon "20 minutes" corrected. |
+| 4 | Trusted hostname at the edge. | Accepted: `X-Retenure-Host` set at the edge, the edge secret, exact `Origin`, the bootstrap exemption, `Path=/`. |
+| 5 | Redirect and host lifecycle. | **Simplified:** one host per firm and no redirects in v1; activation requires DNS, the alternate domain name and the certificate; full lifecycle moves to #3. |
+| 6 | Whole-batch validation. | Accepted: rules listed; closed-branch answers rejected; nothing persisted on failure. |
+| 7 | Household copy and `libraryId`. | Accepted, **simplified:** the copy never includes sensitive answers; `libraryId` removed from the client. |
+| 8 | Wire consistency with the backend. | Accepted: backend error body and status policy, renewal returns JSON, `fieldErrors` with a fallback. |
+| 9 | Renderer versus existing controls. | Accepted: per-kind rules table; RadioGroup `optionErrors`. |
+| 10 | Renderer state and interaction. | **Moved** to the design gate for journey screens and #35, listed under Client pieces. |
+| 11 | Honest leave behaviour. | Accepted: best-effort prompt, upfront copy, guarded in-app exits; `saveAndFinishLater` removed; canon fixed. |
+| 12 | Branding boundary. | Accepted: asset URL rule, neutral reset; #3 and tenancy guide aligned. **Simplified:** neutral link previews in v1. |
+| 13 | Release scope and studio. | Accepted: v1 kinds gated at publish, "new journey" clarified, studio Angular 22 dependency. |
+| 14 | Readiness record and verification. | Accepted: owners, order, budget, verification matrix, review history. |
+
+### First review (draft, plan-reviewer)
+
+All 15 findings were accepted. Several were later superseded by the user's decision to remove drafts: the save and withdraw endpoints, revisions and per-question requests are gone. The rest carry through: per-person instance ids, the cache rule, CSRF, the tenant header, error codes, messages by reason, the copy object, option-input validators, the pure renderer and Check your answers.
