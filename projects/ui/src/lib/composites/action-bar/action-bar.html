@@ -1,0 +1,27 @@
+@if (!hidden()) {
+  <div class="bar">
+    @if (actions().link; as link) {
+      <ret-button
+        class="link-action"
+        variant="link"
+        [label]="link"
+        [disabled]="pending()"
+        (pressed)="linkPressed.emit()"
+      />
+    }
+    @if (labels().secondary; as secondary) {
+      <ret-button
+        variant="secondary"
+        [label]="secondary"
+        [disabled]="pending()"
+        (pressed)="secondaryPressed.emit()"
+      />
+    }
+    <ret-button
+      type="submit"
+      [label]="labels().primary"
+      [pending]="pending()"
+      (pressed)="primaryPressed.emit()"
+    />
+  </div>
+}
