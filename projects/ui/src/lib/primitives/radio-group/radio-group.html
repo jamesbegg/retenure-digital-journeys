@@ -49,7 +49,7 @@
           [label]="option.input.label"
           [type]="option.input.type"
           [size]="size()"
-          [error]="optionErrors()[option.value]"
+          [error]="optionError(option.value)"
           [errorPrefix]="errorPrefix()"
           [formControl]="detail"
         />

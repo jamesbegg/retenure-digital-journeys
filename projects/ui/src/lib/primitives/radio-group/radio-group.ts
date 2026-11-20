@@ -80,6 +80,11 @@ export class RadioGroup implements ControlValueAccessor {
     return ids.filter(Boolean).join(' ') || null;
   }
 
+  protected optionError(value: string) {
+    const errors = this.optionErrors();
+    return Object.hasOwn(errors, value) ? errors[value] : undefined;
+  }
+
   protected optionId(index: number) {
     return `${this.id}-${index}`;
   }

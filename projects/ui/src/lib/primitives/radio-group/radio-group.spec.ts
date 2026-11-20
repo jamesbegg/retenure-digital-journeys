@@ -200,6 +200,18 @@ describe('RadioGroup', () => {
     expect(description).toMatch(/Error:\s*Enter an amount like 250/);
   });
 
+  it('reads only errors the caller supplied, not inherited names like toString', async () => {
+    const tricky: RadioOption[] = [
+      { value: 'toString', label: 'Other', input: { label: 'Tell us more', type: 'text' } },
+      { value: 'same', label: 'Same' },
+      { value: 'less', label: 'Less' },
+    ];
+    await render(RadioGroup, { inputs: { label: 'Pick one', options: tricky } });
+    await userEvent.setup().click(screen.getByRole('radio', { name: 'Other' }));
+    const field = screen.getByRole('textbox', { name: 'Tell us more' });
+    expect(field.hasAttribute('aria-invalid')).toBe(false);
+  });
+
   it('marks touched only when focus leaves the group', async () => {
     const { control } = await renderGroup();
     const user = userEvent.setup();
