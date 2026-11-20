@@ -1,5 +1,5 @@
 @for (layout of variants.layout | keyvalue; track layout.key) {
-  <ret-journey-shell [heading]="layout.value" [layout]="layout.key" branding="firm">
+  <ret-journey-shell [heading]="layout.value" [layout]="layout.key">
     <p slot="header">Hartwell Wealth</p>
     <p slot="steps">Step 2 of 4: Your plans</p>
     <p>Priya, check what Helen holds for both of you.</p>
@@ -7,17 +7,15 @@
     <p slot="contact">Questions? Email Helen Hartwell at helen&#64;hartwell.example</p>
   </ret-journey-shell>
 }
-@for (branding of variants.branding | keyvalue; track branding.key) {
-  <ret-journey-shell [heading]="branding.value" layout="centred" [branding]="branding.key">
-    @if (branding.key === 'firm') {
-      <p slot="header">Hartwell Wealth</p>
-    }
-    <p>We could not find this page.</p>
-    <p slot="contact">Questions? Email Helen Hartwell at helen&#64;hartwell.example</p>
-  </ret-journey-shell>
-}
+<ret-journey-shell
+  heading="Generic error: we could not load your check-in"
+  layout="centred"
+  state="error"
+>
+  <p>Please try the link in your email again later.</p>
+</ret-journey-shell>
 @for (state of variants.state | keyvalue; track state.key) {
-  <ret-journey-shell [heading]="state.value" [state]="state.key" branding="firm">
+  <ret-journey-shell [heading]="state.value" [state]="state.key">
     <p slot="header">Hartwell Wealth</p>
     <p>Something went wrong saving your answers. Your answers so far are safe.</p>
     <p slot="actions">[Continue]</p>

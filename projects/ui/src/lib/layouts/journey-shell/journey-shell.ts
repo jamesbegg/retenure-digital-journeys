@@ -6,7 +6,7 @@ import {
   input,
   viewChild,
 } from '@angular/core';
-import { ShellBranding, ShellLayout, ShellState } from '../../interfaces/journey-shell';
+import { ShellLayout, ShellState } from '../../interfaces/journey-shell';
 import { nextId } from '../../utils/id';
 
 @Component({
@@ -18,15 +18,12 @@ import { nextId } from '../../utils/id';
 export class JourneyShell {
   readonly heading = input.required<string>();
   readonly layout = input<ShellLayout>('default');
-  readonly branding = input.required<ShellBranding>();
   readonly state = input<ShellState>('ready');
   readonly skipLinkLabel = input('Skip to main content');
   readonly loadingLabel = input('Loading');
 
   protected readonly mainId = nextId('ret-main');
-  protected readonly showBrand = computed(
-    () => this.branding() === 'firm' && this.state() !== 'loading',
-  );
+  protected readonly showChrome = computed(() => this.state() !== 'loading');
   protected readonly steps = computed(
     () => this.layout() === 'with-steps' && this.state() === 'ready',
   );
