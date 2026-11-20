@@ -1,6 +1,6 @@
 # Questions engine: client contract, interfaces and renderer
 
-Status: plan-reviewed, awaiting the user's go-ahead (#6 is a stop point)
+Status: plan-reviewed; decisions confirmed by the user; implementation awaits the user's go-ahead (#6 is a stop point)
 Risk: high (client answers, tenant isolation, the shape every journey depends on)
 Plan review: done (findings below)
 
@@ -58,23 +58,24 @@ All endpoints are under `/api/v1`, same origin, JSON, and every response carries
 | Method and path | Returns | Notes |
 | --- | --- | --- |
 | `GET /public/tenant` | `TenantResponse` | Tenant from the `Host` header. Branding only. 404 for an unknown, unverified or suspended host. |
-| `GET /journey` | `JourneyResponse` | The session's journey and its saved drafts. |
-| `PUT /journey/answers/{questionId}` | `AnswerSaved` | Body `AnswerInput`. Saves a draft. |
-| `DELETE /journey/answers/{questionId}` | `AnswerSaved` | Removes a draft when the client closes a follow-up (No on the parent). |
-| `POST /journey/submit` | `SubmitResult` | Body `{ revision }`. |
+| `GET /journey` | `JourneyResponse` | The session's journey. |
+| `POST /journey/session` | 204 | Extends the session when the client chooses "I need more time". |
+| `POST /journey/submit` | `SubmitResult` | Body `SubmitBody`: every answer, once, at the end. |
+
+**No drafts.** Answers stay in the page until Submit, and nothing is stored before then, on the server or in the browser (user decision). A refresh or closed tab loses unsent answers, so the page asks before leaving. Drafts can be added later if drop-out data shows a need.
 
 `questionId` is always the plan instance id (see Questions).
 
 **Session and request rules:**
 - Auth is a host-only `__Host-` session cookie: `Secure`, `HttpOnly`, `SameSite=Strict`, no `Domain` attribute. Every `*.retenure.io` firm counts as the same site, so `SameSite` alone does not stop one firm's subdomain sending forged writes. That is why the next two rules exist.
-- `PUT`, `DELETE` and `POST` require `Content-Type: application/json` and an `Origin` header equal to the request host. Anything else gets 403.
+- `POST` requests require `Content-Type: application/json` and an `Origin` header equal to the request host. Anything else gets 403.
 - `GET /journey` and every write respond with `Cache-Control: no-store, private`. The CDN key includes only the host, so a cached journey would reach another household of the same firm.
 - `GET /public/tenant` may be cached per host.
 
-**Revisions:**
-- Every saved or deleted answer increments the journey's `revision`.
-- Submit sends the last `revision` the client saw. If the server is ahead (another tab, or a retry that landed late), it answers 409 `staleAnswers` and the client reloads before submitting.
-- The client keeps one request in flight per question and sends only the latest value.
+**Session timing (WCAG 2.2.1):**
+- The session has an idle limit of at least 30 minutes.
+- The app warns 2 minutes before it ends, with "I need more time", which calls `POST /journey/session`.
+- If the session has ended by the time the client submits, the backend answers 401 `sessionExpired`. The client verifies again and resubmits the answers it still holds in memory, so nothing is lost while the page stays open.
 
 ### Errors
 
@@ -85,10 +86,9 @@ interface ApiError {
   code:
     | 'unknownHost'       // 404 on /public/tenant
     | 'tenantMismatch'    // 409: host, X-Tenant-Id and session disagree
-    | 'sessionExpired'    // 401: verify again; drafts are safe
+    | 'sessionExpired'    // 401: verify again, then resubmit
     | 'expired'           // 410: the invitation has passed its date
     | 'submitted'         // 410: already submitted
-    | 'staleAnswers'      // 409 on submit: reload first
     | 'invalidAnswer'     // 422: kind mismatch, unknown question, stale version, closed follow-up branch
     | 'missingAnswers'    // 422 on submit: required answers absent
     | 'forbidden';        // 403: Origin or content-type check failed
@@ -139,8 +139,6 @@ interface JourneyResponse {
   client: ClientInfo;
   adviser: AdviserContact;
   sections: Section[];
-  answers: SavedAnswer[];      // drafts, so a refresh resumes where the client was
-  revision: number;
 }
 
 interface JourneyMeta {
@@ -222,7 +220,7 @@ interface QuestionBase {
 
 interface FollowUp {
   when: AnswerMatch;
-  questions: Question[];       // on the same card; withdrawn (DELETE) when `when` stops matching
+  questions: Question[];       // on the same card; their answers are cleared when `when` stops matching
 }
 
 type AnswerMatch =
@@ -302,17 +300,16 @@ type AnswerValue =
   | { kind: 'confirmFacts'; changed: { factId: string; newValue: string }[] }   // empty: all still right
   | { kind: 'goals'; changes?: string };    // absent: still right
 
-interface AnswerInput {        // PUT body
+interface SubmittedAnswer {
+  questionId: string;          // plan instance id
   questionVersion: number;
   answer: AnswerValue;
 }
 
-interface SavedAnswer extends AnswerInput {
-  questionId: string;
-  savedAt: string;
+interface SubmitBody {
+  answers: SubmittedAnswer[];  // open branches only; closed follow-ups are left out
 }
 
-interface AnswerSaved { questionId: string; revision: number }
 interface SubmitResult { submittedAt: string }
 ```
 
@@ -332,24 +329,24 @@ The backend answers 422 `invalidAnswer` if an answer's `kind` differs from its q
 ```text
 app start    ─▶ TenantService.load()      GET /public/tenant ─▶ theme on :root │ 404 ─▶ generic error page
 route        ─▶ JourneyService.load()     GET /journey ─▶ parse ─▶ signals       │ error ─▶ page for its code
-section      ─▶ QuestionRenderer          section + answers in; answerChange / answerWithdrawn / complete out
-answerChange ─▶ JourneyService.save()     PUT (latest value per question, one in flight)
-withdrawn    ─▶ JourneyService.withdraw() DELETE
-check answers─▶ JourneyService.submit()   POST { revision } ─▶ done screen
+section      ─▶ QuestionRenderer          section + answers in; answersChange / complete out
+answersChange─▶ JourneyService            answers held in a signal, in memory only
+check answers─▶ JourneyService.submit()   POST { answers } ─▶ done screen
 ```
 
 - **`TenantService`** (`src/app/tenant/`, #3) makes one call, applies the theme, and holds `tenantId` for the `X-Tenant-Id` header.
 - **`JourneyService`** (`src/app/journey/`):
   - Holds the journey state as signals and does the HTTP.
-  - Keeps no drafts in browser storage: the server holds them, which removes a whole class of cross-tenant storage leaks.
+  - Holds answers in memory only, and asks before the page is left with unsent answers.
+  - Runs the session-timeout warning.
   - Shows the screen state through JourneyShell's `state` (`loading`, `ready`, `error`, `blocked`).
 - **Parsers** (`src/app/api/`): one per response. They reject an unknown `kind`, `type`, `rule` or `schemaVersion`.
 - **`QuestionRenderer`** is a pure component:
   - Inputs: `section`, `answers`, `copy`, `members`.
-  - Outputs: `answerChange { questionId, answer }`, `answerWithdrawn { questionId }`, `complete`.
+  - Outputs: `answersChange` (the full answer map for the section, with closed follow-ups removed) and `complete`.
   - It never calls a service, so the studio preview can use it with no backend.
   - It uses an exhaustive `switch` on `kind` and builds one `FormControl` per question, with `Validators.required` and the shared validators attached by `rule`.
-  - It opens follow-ups when their `AnswerMatch` holds, and withdraws them when it stops.
+  - It opens follow-ups when their `AnswerMatch` holds, and clears their answers when it stops.
   - It applies the progressive-disclosure rules (#35, journey-ux).
 
 ## Extensibility
@@ -369,7 +366,7 @@ check answers─▶ JourneyService.submit()   POST { revision } ─▶ done scre
 - Answers are never logged, put in a URL or sent to analytics; logs use question ids and outcomes only.
 - Payload minimisation: first names only; held facts for the client's own household only; no reasons or suppressed list.
 - Prompts, hints and fact values render as text, never as HTML.
-- Withdrawn follow-up answers are deleted when withdrawn, and dropped again at submit.
+- Nothing is stored before submit. Answers from closed follow-ups are left out by the client and rejected again by the backend.
 
 ## Failure behaviour
 
@@ -377,10 +374,10 @@ check answers─▶ JourneyService.submit()   POST { revision } ─▶ done scre
 | --- | --- |
 | `unknownHost`, `tenantMismatch`, tenant lookup fails | Generic error page, no branding. |
 | Journey cannot be fetched or parsed | Generic error page. |
-| `sessionExpired` | Verification step, then resume; drafts are safe. |
+| `sessionExpired` | Verification step, then resubmit the answers held in memory. |
 | `expired`, `submitted` | A calm, branded page with the adviser's email from `ApiError.adviser`. |
-| Save or withdraw fails | The answer stays in memory with an inline retry; Continue stays available; nothing is lost. |
-| `staleAnswers` | Reload the journey, then show Check your answers again. |
+| Submit fails (network) | Stay on Check your answers with a retry; the answers are still in memory. |
+| Client leaves with unsent answers | The browser asks to confirm. |
 | `missingAnswers`, `invalidAnswer` | Take the client to the first listed question with its message. |
 
 ## Decisions
@@ -390,10 +387,21 @@ check answers─▶ JourneyService.submit()   POST { revision } ─▶ done scre
 - Question sets come from the backend per client; none are stored in the frontend.
 - Branding is set once at start-up from the backend; if the firm or journey cannot be fetched, a generic error page shows.
 - The shared validators are light-touch and attached per question.
+- Submit once at the end, with no drafts. Drafts can come later if drop-out data shows a need.
+- Accepted: the renderer and question types live in `@retenure/ui`; per-person answers come from plan instances with `personId`; this `TenantTheme` supersedes #3's draft.
 
-### Proposed, for the user to confirm
+### Follow-up: measuring drop-out
 
-1. **Drafts on the server only.** Simpler and safer than browser storage; the cost is one request per answered card.
+The user wants analytics to show where clients drop out. The canon allows no third-party analytics on journey pages without an ADR, because answers are sensitive. The proposal for that ADR:
+- first-party events only, sent to the backend: `journeyOpened`, `sectionReached { sectionId }` and `submitted`
+- each event keyed by tenant and journey, and never carrying an answer value
+- reported per firm in the studio
+
+Not built in this piece.
+
+### Proposed earlier, now settled
+
+1. ~~Drafts on the server only.~~ Superseded: the user chose submit-once with no drafts.
 2. **The renderer and question types live in `@retenure/ui`,** not `src/app/engine` as the canon says. The studio preview has to render exactly what clients see (#7). The canon would be updated.
 3. **Per-person answers through plan instances with `personId`,** not one answer holding several people.
 4. **This `TenantTheme` supersedes #3's draft.** Colours come in light and dark pairs, and the adviser contact moves to the journey.
@@ -411,7 +419,7 @@ check answers─▶ JourneyService.submit()   POST { revision } ─▶ done scre
 
 1. Backend:
    - the host table and canonical redirect
-   - the five endpoints with this schema
+   - the three endpoints with this schema
    - the cookie, `Origin` and cache rules
    - #5's publish-time checks
 2. This repo:
@@ -429,13 +437,15 @@ check answers─▶ JourneyService.submit()   POST { revision } ─▶ done scre
 - **Renderer:**
   - each `kind` renders its component
   - `personId` questions name the person
-  - follow-ups open, and emit `answerWithdrawn` when closed
+  - follow-ups open, and their answers leave `answersChange` when closed
   - validators attach by `rule`, with the message for each reason
   - Continue appears only when the screen is complete
 - **`JourneyService`, with HTTP mocked:**
   - one request in flight per question, latest value wins
-  - `DELETE` on withdraw
-  - submit sends `revision`, and `staleAnswers` reloads
+  - submit sends every open answer once
+  - a 401 on submit leads to verification and resubmits the same answers
+  - the timeout warning appears and "I need more time" extends the session
+  - leaving with unsent answers asks first
   - each `ApiError` code reaches its screen
   - no answer values in logs
 - **e2e:**
@@ -455,14 +465,14 @@ check answers─▶ JourneyService.submit()   POST { revision } ─▶ done scre
 
 | # | Finding | Resolution |
 | --- | --- | --- |
-| 1 | Blocker: a withdrawn follow-up's answer stays on the server. | Accepted: `DELETE` on withdraw; closed-branch answers dropped at submit. |
+| 1 | Blocker: a withdrawn follow-up's answer stays on the server. | Resolved by removing drafts: nothing is stored before submit, and closed-branch answers are left out by the client and rejected by the backend. |
 | 2 | Blocker: no per-person answers; answers keyed by library id. | Accepted: plan instance `id`, `libraryId`, `personId`. |
 | 3 | No cache rule for journey responses. | Accepted: `Cache-Control: no-store, private`, plus an e2e check. |
 | 4 | CSRF across firm subdomains. | Accepted: `__Host-` cookie, `Origin` and content-type checks. |
 | 5 | Contradicts the tenancy canon (tenant header) and #3's theme. | Accepted: `X-Tenant-Id` header as the canon says; this theme supersedes #3's. |
 | 6 | No adviser email on error pages; conflicts with the user's generic error page. | Accepted: a generic page when the firm or journey cannot be fetched; a calm page with `ApiError.adviser` only for `expired` and `submitted`. |
 | 7 | Error shapes undefined; status codes collide. | Accepted: `ApiError` with one code per case. |
-| 8 | `answersHash` undefined; retries can arrive out of order. | Accepted: `revision`; one request in flight per question. |
+| 8 | `answersHash` undefined; retries can arrive out of order. | Resolved by removing drafts: there is one submit and nothing to reconcile. |
 | 9 | One message cannot cover several reasons; UI copy has no source. | Accepted: `messages` by reason; `JourneyMeta.copy`. |
 | 10 | Value formats unstated. | Accepted: stated on `AnswerValue` and `AnswerMatch`. |
 | 11 | Option inputs cannot be validated. | Accepted: `validators` on the option input. |

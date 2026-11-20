@@ -18,7 +18,7 @@ One deployment serves every firm. A client must only ever see their own firm's d
 - The tenant-scoped HTTP interceptor adds the tenant id to every API call. The backend authorises it; the client header is a check, not the authority.
 - Every cache key, browser storage key, service worker cache name and in-memory store includes the tenant id.
 - Asset URLs (logo, favicon, theme) are tenant-specific and served from tenant-prefixed paths. Never cache them under a shared key.
-- Drafts are keyed by tenant, journey and invitation, and cleared on submit and sign-out.
+- There are no drafts: answers are submitted once. If drafts are added later, they are keyed by tenant, journey and invitation, and cleared on submit and sign-out.
 
 ## Branding
 

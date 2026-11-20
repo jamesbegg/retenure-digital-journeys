@@ -20,7 +20,7 @@ It is not:
 
 1. **Every component is configurable and globally reusable.** A component takes its content, variant and state through typed inputs and works in every journey, every firm and the studio preview. No component knows which journey, screen or firm it is in. If a second screen needs a slightly different version, add a typed variant to the shared component; never fork or copy it.
 2. **WCAG 2.2 AA, with real font scaling.** Many clients are older. Every screen works at 200% browser zoom and at 200% text-only scaling, reflows at 320 CSS px with no horizontal scroll, and has 44 x 44 px targets for primary controls. Sizes are in `rem`, never fixed `px` for text or text containers. See `.github/instructions/accessibility.instructions.md`.
-3. **No cross-firm data or branding, ever.** The tenant is resolved once from the hostname and every request, cache key, asset URL, log line and stored draft is scoped to it. A firm's name, logo, colours or copy must never render for another firm's client, including in error pages, emails and cached shells. See `.github/instructions/tenancy.instructions.md`.
+3. **No cross-firm data or branding, ever.** The tenant is resolved once from the hostname and every request, cache key, asset URL, log line and anything stored is scoped to it. A firm's name, logo, colours or copy must never render for another firm's client, including in error pages, emails and cached shells. See `.github/instructions/tenancy.instructions.md`.
 
 ## Sources of truth
 
@@ -171,7 +171,7 @@ Each rule pairs with what enforces it. When the user corrects an agent, fix the 
 | The production build contains no gallery and no synthetic firm or household name. | `fileReplacements` for `src/app/dev-routes.ts`; `tools/check-dist.mjs` in `npm run build` |
 | Components take content through inputs. No firm name, journey name, client name or screen-specific copy inside a shared component. | judgment; planned: lint check for hard-coded copy in `ui/` templates |
 | No firm branding outside the tenant theme: no colour literal, logo path or firm name in components or screens. | stylelint `color-no-hex`, `color-named` and `function-disallowed-list` outside `projects/ui/src/lib/tokens`; logo paths and firm names are judgment |
-| Every tenant-scoped request, cache key and stored draft includes the tenant id. | planned (#3): HTTP interceptor spec; `e2e/tenancy.spec.ts` exists with both synthetic firms and is `fixme` until branding lands |
+| Every tenant-scoped request, cache key and anything stored includes the tenant id. | planned (#3): HTTP interceptor spec; `e2e/tenancy.spec.ts` exists with both synthetic firms and is `fixme` until branding lands |
 | Text and text containers size in `rem`. No `px` font sizes, no fixed heights on text containers. | stylelint `declaration-property-unit-disallowed-list` (`px`, `pt` and viewport units in `font-size` and `font`; `px`, `pt` in `line-height`); fixed heights are judgment, with clipped `overflow: hidden` text caught by `e2e/zoom.spec.ts` |
 | No `outline: none` or zero outline. | stylelint `declaration-property-value-disallowed-list` |
 | No `text-transform: uppercase` (no eyebrow labels). | stylelint `declaration-property-value-disallowed-list` |

@@ -9,7 +9,7 @@ Test behaviour, not implementation trivia.
 ## Levels
 
 - **Component specs** (`projects/ui/**`): every variant and state renders, inputs change output, outputs fire, `ControlValueAccessor` round-trips a value, keyboard interaction works, labels and descriptions are wired.
-- **Renderer and journey specs**: a question definition renders the right component; follow-ups open and close on the parent answer; Continue appears only when the screen is complete; drafts save and restore.
+- **Renderer and journey specs**: a question definition renders the right component; follow-ups open and close on the parent answer; Continue appears only when the screen is complete; leaving with unsaved answers asks first.
 - **Playwright e2e** (`e2e/`): one smoke path per journey, plus the cross-cutting specs below.
 
 ## Cross-cutting specs that must stay green
