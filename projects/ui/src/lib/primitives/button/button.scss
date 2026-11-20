@@ -21,12 +21,15 @@
   cursor: pointer;
 }
 
-.content ret-icon:first-child:not(:last-child) {
-  margin-inline-end: 0.4em;
+.content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  min-inline-size: 0;
 }
 
-.content ret-icon:last-child:not(:first-child) {
-  margin-inline-start: 0.4em;
+.label {
+  min-inline-size: 0;
 }
 
 .md {
