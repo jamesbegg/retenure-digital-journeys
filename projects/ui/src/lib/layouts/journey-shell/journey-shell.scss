@@ -6,7 +6,7 @@
   --shell-measure: var(--ret-measure);
 }
 
-:host(.centred) {
+:host([data-layout='centred']) {
   --shell-measure: var(--ret-measure-narrow);
 }
 

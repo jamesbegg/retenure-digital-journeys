@@ -13,7 +13,7 @@ import { nextId } from '../../utils/id';
   selector: 'ret-journey-shell',
   templateUrl: './journey-shell.html',
   styleUrl: './journey-shell.scss',
-  host: { '[class.centred]': "layout() === 'centred'" },
+  host: { '[attr.data-layout]': 'layout()' },
 })
 export class JourneyShell {
   readonly heading = input.required<string>();

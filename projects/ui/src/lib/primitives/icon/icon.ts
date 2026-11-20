@@ -41,7 +41,7 @@ const ICONS = {
   selector: 'ret-icon',
   templateUrl: './icon.html',
   styleUrl: './icon.scss',
-  host: { '[class]': '[size(), tone()]' },
+  host: { '[attr.data-size]': 'size()', '[attr.data-tone]': 'tone()' },
 })
 export class Icon {
   readonly name = input.required<IconName>();

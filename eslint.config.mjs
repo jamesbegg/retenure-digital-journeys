@@ -158,6 +158,27 @@ export default defineConfig(
     },
   },
   {
+    files: ['projects/ui/src/lib/{primitives,composites,layouts}/**/*.ts'],
+    ignores: ['**/*.spec.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...typesOutsideInterfaces,
+        ...signalApis,
+        {
+          selector:
+            'Decorator Property[key.name="host"] > ObjectExpression > Property:matches([key.value=/^\\[?class/], [key.name="class"])',
+          message:
+            "Put host variants in data attributes ('[attr.data-size]'). A parent's .md or .primary style would also match a host class.",
+        },
+        {
+          selector: 'Decorator[expression.callee.name=/^Host(Binding|Listener)$/]',
+          message: "Use the component's host metadata, with data attributes for variants.",
+        },
+      ],
+    },
+  },
+  {
     files: ['src/app/**/*.ts'],
     ignores: ['src/app/gallery/**'],
     rules: {

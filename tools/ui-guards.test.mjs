@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, before, describe, it } from 'node:test';
 import { ESLint } from 'eslint';
+import stylelint from 'stylelint';
 import { checkDist } from './check-dist.mjs';
 import { checkUiFiles } from './check-ui-files.mjs';
 
@@ -263,6 +264,47 @@ function tree(files) {
   }
   return root;
 }
+
+describe('host variants', () => {
+  expectProblem(
+    'fails a host class binding in a UI component',
+    primitive,
+    "import { Component, input } from '@angular/core';\n@Component({ selector: 'ret-x', template: '', host: { '[class]': 'size()' } })\nexport class X {\n  size = input<ButtonSize>('md');\n}\n",
+    'Put host variants in data attributes',
+  );
+  expectProblem(
+    'fails a static host class',
+    primitive,
+    "import { Component } from '@angular/core';\n@Component({ selector: 'ret-x', template: '', host: { class: 'md' } })\nexport class X {}\n",
+    'Put host variants in data attributes',
+  );
+  expectProblem(
+    'fails @HostBinding',
+    primitive,
+    "import { Component, HostBinding } from '@angular/core';\n@Component({ selector: 'ret-x', template: '' })\nexport class X {\n  @HostBinding('class.md') md = true;\n}\n",
+    "Use the component's host metadata",
+  );
+  expectClean(
+    'passes a host data attribute',
+    primitive,
+    "import { Component, input } from '@angular/core';\nimport { ButtonSize } from '../../interfaces/button';\n@Component({ selector: 'ret-x', template: '', host: { '[attr.data-size]': 'size()' } })\nexport class X {\n  size = input<ButtonSize>('md');\n}\n",
+  );
+  it('fails a :host(.class) selector and passes a data attribute one', async () => {
+    const lint = async (code) =>
+      (
+        await stylelint.lint({ code, codeFilename: 'projects/ui/src/lib/primitives/x/x.scss' })
+      ).results[0].warnings.map((w) => w.rule);
+    assert.ok(
+      (await lint(':host(.lg) {\n  display: block;\n}\n')).includes('selector-disallowed-list'),
+    );
+    assert.ok(
+      (await lint(':host(:not(.md)) .label {\n  display: block;\n}\n')).includes(
+        'selector-disallowed-list',
+      ),
+    );
+    assert.deepEqual(await lint(":host([data-size='lg']) {\n  display: block;\n}\n"), []);
+  });
+});
 
 describe('check-ui-files', () => {
   const dir = 'projects/ui/src/lib/primitives/button';
