@@ -49,6 +49,8 @@
           [label]="option.input.label"
           [type]="option.input.type"
           [size]="size()"
+          [error]="optionError(option.value)"
+          [errorPrefix]="errorPrefix()"
           [formControl]="detail"
         />
       }

@@ -30,6 +30,10 @@ export class RadioGroupStory {
     value: 'more',
     input: '250',
   });
+  protected readonly optionError = new FormControl<RadioGroupValue | null>({
+    value: 'more',
+    input: 'about 250',
+  });
   protected readonly disabled = new FormControl<RadioGroupValue | null>({
     value: { value: 'less' },
     disabled: true,

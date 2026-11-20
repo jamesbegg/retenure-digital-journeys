@@ -20,6 +20,7 @@ export class RadioGroup implements ControlValueAccessor {
   readonly options = input.required<RadioOption[]>();
   readonly hint = input<string>();
   readonly error = input<string>();
+  readonly optionErrors = input<Record<string, string>>({});
   readonly size = input<RadioGroupSize>('lg');
   readonly errorPrefix = input('Error:');
 
@@ -77,6 +78,11 @@ export class RadioGroup implements ControlValueAccessor {
       option.input && this.selected() === option.value && `${this.optionId(index)}-reveal`,
     ];
     return ids.filter(Boolean).join(' ') || null;
+  }
+
+  protected optionError(value: string) {
+    const errors = this.optionErrors();
+    return Object.hasOwn(errors, value) ? errors[value] : undefined;
   }
 
   protected optionId(index: number) {

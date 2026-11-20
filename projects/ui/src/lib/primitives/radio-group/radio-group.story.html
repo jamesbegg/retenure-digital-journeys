@@ -14,5 +14,11 @@
     error="Choose an answer"
     [options]="options"
   />
+  <ret-radio-group
+    label="With an error on the option input"
+    [options]="options"
+    [optionErrors]="{ more: 'Enter an amount like 250 or 250.50' }"
+    [formControl]="optionError"
+  />
   <ret-radio-group label="Disabled" [options]="options" [formControl]="disabled" />
 </main>

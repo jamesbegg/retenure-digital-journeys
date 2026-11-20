@@ -25,6 +25,7 @@
             [readOnly]="readonly()"
             [attr.aria-invalid]="invalidParts().includes(part) || null"
             (input)="inputDate(part, $any($event.target).value)"
+            (paste)="pasteDate($event)"
             (blur)="onTouched()"
           />
         </div>
