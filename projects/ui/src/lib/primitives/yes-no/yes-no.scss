@@ -31,6 +31,10 @@
 }
 
 // Before .option, so the mixin's forced-colors rule for :checked wins.
+[data-invalid] .option {
+  border-color: var(--ret-color-danger);
+}
+
 .option:has(:checked) {
   border-color: var(--ret-brand-primary);
   background: var(--ret-brand-primary);
@@ -42,10 +46,6 @@
 
   justify-content: center;
   font-weight: var(--ret-font-weight-bold);
-}
-
-[data-invalid] .option {
-  border-color: var(--ret-color-danger);
 }
 
 .choice {

@@ -12,6 +12,8 @@ export const stories: Record<string, () => Promise<Type<unknown>>> = {
   icon: () => import('./lib/primitives/icon/icon.story').then((m) => m.IconStory),
   'journey-shell': () =>
     import('./lib/layouts/journey-shell/journey-shell.story').then((m) => m.JourneyShellStory),
+  'radio-group': () =>
+    import('./lib/primitives/radio-group/radio-group.story').then((m) => m.RadioGroupStory),
   'text-field': () =>
     import('./lib/primitives/text-field/text-field.story').then((m) => m.TextFieldStory),
   'yes-no': () => import('./lib/primitives/yes-no/yes-no.story').then((m) => m.YesNoStory),

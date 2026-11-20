@@ -1,6 +1,6 @@
 # Repo setup: scaffold, shared UI package, enforced layering, first components
 
-Status: approved for implementation
+Status: implemented (PRs #40 to #49, awaiting review and merge)
 Risk: medium (sets every structural rule later work builds on)
 Plan review: done (findings below)
 
@@ -175,6 +175,8 @@ Nothing is live. The package is consumed through a `tsconfig` path in this repo.
 - **FieldMessages (internal primitive), added with YesNo.** TextField, YesNo and RadioGroup each need the same hint, error and always-present live region. Building it once beats three copies. It has a spec and a story like any component, is not exported from `public-api.ts`, and `utils/described-by.ts` builds the matching `aria-describedby`.
 - **Story layout is global.** `.ret-stack` and `.ret-cluster` in `projects/ui/src/styles/_utilities.scss` replace a stylesheet per story; the gallery frame gives the padding. Journey templates still cannot use `ret-*` classes.
 
+- **Shared validators, added to #49 at the user's request.** `utils/validators.ts`: `emailAddress`, `ukPhone`, `personName`, `dateOfBirth(minAge, maxAge)` and `moneyAmount(min, max)`. Light-touch checks that catch slips (a name in the email field, 1196 for 1996), not strict formats. Empty values pass so `Validators.required` decides; error copy comes from each question definition.
+
 ### Unresolved and blocking
 
 None.
@@ -212,3 +214,19 @@ None.
 - [x] Shared contracts (`Variants`, slots, tokens) land in #2, before any component. `utils/` (`nextId`, `provideValueAccessor`) and the `surface` mixin land with their first user (TextField and Card), so #2 adds no unused code.
 - [x] Material failures map to guards, specs or e2e.
 - [x] No unresolved decision can invalidate work underway.
+
+## Outcome review
+
+| Metric | Result | Evidence |
+|---|---|---|
+| Planned versus actual work units and files | 10 PRs as planned, plus Icon (#12) before Button and one internal primitive (FieldMessages) | PRs #40 to #49 |
+| Agents used | 1 plan review; 3 reviews per component PR (code, test, accessibility); 2 to 3 for #8 and #2 | PR descriptions |
+| Accepted review findings | Most "act on" findings across all PRs, each fixed before its PR opened | PR descriptions |
+| Rejected review findings | Blocker classification of the safely inferred decisions; `pendingLabel` and other neutral default copy (canon allows it); steps shown in every shell state; mapping `string` inputs to `never` in `Variants` | Plan review table, PR #44, PR #42 |
+| Verification failures by classification | Regressions caught before push: host-class collision (Button/Icon), e2e checking unrendered pages, long-word overflow on CI's Linux fonts (#44), an emptied gallery template (caught by e2e), a guard test that deleted `interfaces/` (now sandboxed) | PR #44, #41, #48 descriptions |
+| Replans | FieldMessages; global story layout utilities; host variants as data attributes (new lint rule) | Replans section, AGENTS.md |
+| Ownership conflicts | None (single writer, linear stack) | — |
+| Human decisions | Angular 22 instead of 20; same-layer imports; component order; card accent bar and card headings versus journey-ux; neutral default copy versus localisation; native `disabled` versus `aria-disabled` | Decisions section, PR descriptions |
+| Residual risks | The zoom e2e does not catch content spilling outside its own container within the viewport; a `string` type alias slips past the variant-input rule; tokens and styles are not yet packaged for the studio | PR #48, #41 |
+| Post-completion defects | Unknown at completion | Update when known |
+

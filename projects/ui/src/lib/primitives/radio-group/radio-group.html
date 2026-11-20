@@ -1,0 +1,57 @@
+<fieldset
+  class="field"
+  [attr.data-size]="size()"
+  [attr.data-invalid]="error() ? true : null"
+  [disabled]="disabled()"
+  [attr.aria-describedby]="describedBy()"
+  (focusout)="leave($event)"
+>
+  <legend class="question">{{ label() }}</legend>
+  <ret-field-messages
+    [fieldId]="id"
+    [hint]="hint()"
+    [error]="error()"
+    [errorPrefix]="errorPrefix()"
+  />
+  <div class="options">
+    @for (option of options(); track $index) {
+      <label class="option">
+        <input
+          type="radio"
+          class="ret-visually-hidden"
+          [name]="id"
+          [value]="option.value"
+          [checked]="selected() === option.value"
+          [attr.aria-labelledby]="optionId($index) + '-label'"
+          [attr.aria-describedby]="describeOption(option, $index)"
+          (change)="select(option.value)"
+        />
+        <span class="mark" aria-hidden="true">
+          @if (selected() === option.value) {
+            <ret-icon name="check" size="sm" />
+          }
+        </span>
+        <span class="text">
+          <span class="option-label" [id]="optionId($index) + '-label'">{{ option.label }}</span>
+          @if (option.hint) {
+            <span class="option-hint" [id]="optionId($index) + '-hint'">{{ option.hint }}</span>
+          }
+          @if (option.input && selected() === option.value) {
+            <span class="ret-visually-hidden" [id]="optionId($index) + '-reveal'">{{
+              option.input.label
+            }}</span>
+          }
+        </span>
+      </label>
+      @if (option.input && selected() === option.value) {
+        <ret-text-field
+          class="option-input"
+          [label]="option.input.label"
+          [type]="option.input.type"
+          [size]="size()"
+          [formControl]="detail"
+        />
+      }
+    }
+  </div>
+</fieldset>
