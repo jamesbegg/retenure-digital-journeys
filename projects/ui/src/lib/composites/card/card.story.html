@@ -1,0 +1,21 @@
+<main>
+  <h1>Card</h1>
+  @for (variant of variants.variant | keyvalue: null; track variant.key) {
+    <ret-card [heading]="variant.value" [variant]="variant.key">
+      <ul slot="summary">
+        <li>Priya: retire at 60</li>
+        <li>Tom: help the children with a first home</li>
+      </ul>
+      <p>Have your goals changed since we last spoke?</p>
+    </ret-card>
+  }
+  <ret-card [heading]="variants.disabled" [disabled]="true" variant="answered">
+    <p slot="summary">Retire at 60</p>
+  </ret-card>
+  <ret-card heading="A level 3 heading inside a section" [headingLevel]="3">
+    <p>The heading level follows the page outline.</p>
+  </ret-card>
+  <ret-card>
+    <p>A card with no heading is a plain surface.</p>
+  </ret-card>
+</main>

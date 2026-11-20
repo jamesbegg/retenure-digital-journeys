@@ -1,0 +1,40 @@
+@use '../../tokens/mixins';
+
+:host {
+  display: block;
+}
+
+.card {
+  @include mixins.surface;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--ret-space-4);
+}
+
+.title {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ret-space-2);
+}
+
+.heading {
+  font-size: var(--ret-font-size-lg);
+}
+
+.active {
+  border-inline-start: var(--ret-space-1) solid var(--ret-brand-primary);
+}
+
+.answer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ret-space-2) var(--ret-space-4);
+}
+
+.muted,
+.disabled {
+  background: var(--ret-color-surface-muted);
+}

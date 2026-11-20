@@ -1,0 +1,43 @@
+<section
+  #section
+  class="card"
+  [class]="variant()"
+  [class.disabled]="disabled()"
+  [attr.role]="heading() ? 'group' : null"
+  [attr.aria-labelledby]="heading() ? headingId : null"
+  [attr.aria-current]="variant() === 'active' || null"
+>
+  @if (heading(); as text) {
+    <div class="title">
+      @if (variant() === 'answered') {
+        <ret-icon name="circle-check" tone="success" [label]="answeredLabel()" />
+      }
+      @switch (headingLevel()) {
+        @case (3) {
+          <h3 class="heading" tabindex="-1" [id]="headingId">{{ text }}</h3>
+        }
+        @case (4) {
+          <h4 class="heading" tabindex="-1" [id]="headingId">{{ text }}</h4>
+        }
+        @default {
+          <h2 class="heading" tabindex="-1" [id]="headingId">{{ text }}</h2>
+        }
+      }
+    </div>
+  }
+  @if (variant() === 'answered') {
+    <div class="answer">
+      <div class="summary"><ng-content select="[slot=summary]" /></div>
+      <ret-button
+        variant="ghost"
+        icon="pencil"
+        [label]="editLabel()"
+        [disabled]="disabled()"
+        [describedBy]="heading() ? headingId : undefined"
+        (pressed)="edit.emit()"
+      />
+    </div>
+  } @else {
+    <ng-content />
+  }
+</section>

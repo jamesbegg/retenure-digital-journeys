@@ -4,3 +4,5 @@ export * from './lib/interfaces/icon';
 export * from './lib/primitives/icon/icon';
 export * from './lib/interfaces/button';
 export * from './lib/primitives/button/button';
+export * from './lib/interfaces/card';
+export * from './lib/composites/card/card';

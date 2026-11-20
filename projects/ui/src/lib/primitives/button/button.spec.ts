@@ -61,6 +61,13 @@ describe('Button', () => {
     expect(el.querySelector('ret-icon svg')?.getAttribute('aria-hidden')).toBe('true');
   });
 
+  it('takes a description from another element', async () => {
+    await render(`<h2 id="goals">Your goals</h2><ret-button label="Edit" describedBy="goals" />`, {
+      imports: [Button],
+    });
+    expect(button('Edit').getAttribute('aria-describedby')).toBe('goals');
+  });
+
   it('is natively disabled and does not emit', async () => {
     const pressed = vi.fn();
     await render(Button, { inputs: { label: 'Continue', disabled: true }, on: { pressed } });

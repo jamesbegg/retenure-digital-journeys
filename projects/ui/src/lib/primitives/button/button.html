@@ -4,6 +4,7 @@
   [type]="type()"
   [disabled]="disabled()"
   [attr.aria-disabled]="pending() || null"
+  [attr.aria-describedby]="describedBy() || null"
   [attr.aria-label]="icon() && iconPosition() === 'only' ? label() : null"
   (click)="press($event)"
 >

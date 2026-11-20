@@ -1,0 +1,5 @@
+@mixin surface {
+  padding: var(--ret-space-4);
+  border-radius: var(--ret-radius);
+  background: var(--ret-color-surface);
+}
