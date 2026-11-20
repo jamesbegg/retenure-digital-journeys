@@ -1,8 +1,8 @@
 # Questions engine: client contract, interfaces and renderer
 
-Status: revised after the fifth review; implementation awaits the user's go-ahead (#6 is a stop point)
+Status: revised after the sixth review; implementation awaits the user's go-ahead (#6 is a stop point)
 Risk: high (client answers, tenant isolation, the shape every journey depends on)
-Plan review: five rounds (findings at the end)
+Plan review: six rounds (findings at the end)
 
 Issues: #6 (engine and renderer), with the parts of #3 (branding), #5 (question library) and #7 (journey definition) the client app consumes.
 
@@ -67,7 +67,14 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
   - The app reads them and removes them from the address bar with the token. Recording them belongs to the drop-out ADR's first-party "journey opened" event; nothing is recorded before that ADR.
   - Email-provider click and open tracking is off: it rewrites links through the provider's domain.
 - The token sits in the fragment (after `#`), so browsers never send it to the server, the CDN logs or other sites.
-- There is one live link per invitation; resending replaces it. A link expires 14 days after it is issued. The invitation has its own expiry; a submitted invitation no longer expires.
+- **Links are records, never overwritten.** Each invitation has link records: `{ hash, issuedAt, state }`.
+  - `state` is `pending` (minted for an email not yet confirmed sent), `live` (confirmed sent) or `superseded`.
+  - A link expires 14 days after it is issued.
+  - The invitation has its own expiry; a submitted invitation no longer expires.
+- **Which links work:**
+  - Any unexpired `pending` or `live` link verifies, because the client may already have a `pending` one in their inbox.
+  - An expired link is still recognised for one purpose, asking for a reissue, until a newer link is confirmed `live`.
+  - When a link is confirmed `live`, every older link becomes `superseded`, and a superseded link does nothing.
 - The token can be used again until then: opening the email link again, or reverifying after the idle timeout, needs the token and the date of birth.
 - **After submission** the link still verifies until its own 14 days run out (submission stops the invitation expiring, so nothing else ends it), but only to a receipt. Verification returns the `submitted` result (`submittedAt`, `submissionId`, the adviser's contact), and creates no session, plan or answers, so nothing can be submitted again. A client whose submit response was lost can still confirm their answers went through.
 
@@ -91,14 +98,19 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
     - One transactional write sets it and creates the outbound message. The write is conditional on there being no `reissue` message for this invitation in the last 24 hours that is `pendingApproval`, `queued`, `sending` or `sent`.
     - A `failed` or `rejected` one does not count, so a failed send never blocks recovery.
     - Two concurrent presses therefore create one message.
-  - **The link is created when the email is sent, not before.** The message records `baseGeneration` (the invitation's `linkGeneration` when it was created) and, once claimed, `ownedGeneration`. It never records a link.
-  - **Each send attempt** follows the backend's existing pattern (`email-transport/send-due.ts`): lease the message, record the attempt, then make one conditional write that mints a token and stores only its hash:
-    - **First attempt:** the invitation is open and its `linkGeneration` equals `baseGeneration`. Set the invitation's `linkGeneration = baseGeneration + 1` and the new hash; set the message's `ownedGeneration` to the same number.
-    - **Resumed attempt:** the invitation is open and its `linkGeneration` equals the message's `ownedGeneration`, so this message already owns the current link. Replace the hash with a freshly minted token. The generation stays the same.
-    - **Anything else**, meaning a newer link or a closed invitation: mark the message `superseded` and send nothing.
-    - Then hand the email, which holds the only copy of the live link, to the provider, and mark it `sent`.
-  - **Crash after the hash write, before sending:** the retry is a resumed attempt. It mints a fresh token and sends it, so the client always gets a working link.
-  - **Uncertain send** (the provider accepted, but the worker crashed before marking it sent): the retry sends again with a fresh token. The client may get two emails, and only the newer link works. That is the same narrow window as the other journey emails.
+  - **The link is created when the email is sent, not before.** The message never records a link. The worker follows the backend's existing transport (`email-transport/send-due.ts`): lease the message and record the attempt.
+  - **Check:** if the invitation is closed, or a link newer than this message's request is already `live`, mark the message `superseded` and send nothing.
+  - **Reconcile first.** If the previous attempt's outcome is unknown, ask the provider before doing anything else, exactly as `send-due.ts` does:
+    - **Accepted:** mark that attempt's link `live` (superseding older ones) and the message `sent`. Nothing new is minted.
+    - **Refused, or never reached the provider:** go on to the next step.
+    - **Still unknown:** treat it as accepted, mark the link `live` and the message `sent`, and do not rotate. The client most likely has that email, and the original expired link stays recognised for reissue until then, so the client can still ask again.
+  - **Mint and send:** add a new `pending` link (only its hash is stored) and hand the email, the only copy of the live link, to the provider.
+    - **Accepted:** the link becomes `live` and the message `sent`.
+    - **Refused:** the message becomes `failed`. Its `pending` link expires unused, and no other link is affected.
+  - **What each failure leaves the client:**
+    - **The provider refuses after the hash write:** nothing was overwritten. The original expired link is still recognised, so pressing Continue requests another reissue, and a `failed` message does not count towards the 24 hours.
+    - **Accepted, but the response was lost:** reconciliation finds it accepted and marks it `live` without minting again, so the link in the client's inbox keeps working.
+    - **Crash before sending:** the `pending` link was never sent. The retry finds no provider record, mints another `pending` link and sends it. The unsent one expires unused.
   - The message record, the approval preview and the timeline show a placeholder, never a live link.
   - A forwarded old link therefore never grants access. It only sends the client a fresh link.
 - **Invitation expired:** a valid token and date of birth return the `expired` verification result, which carries the adviser's contact for the calm page. There is no session and no reissue. A wrong date returns `verification_failed` as usual.
@@ -673,9 +685,11 @@ It must decide retention, who can see the data, and whether identifiers are scop
   - five failures lock the invitation
   - an expired link with an open invitation creates one `reissue` message per 24 hours, to the address on file: `auto` queues it and returns `link_reissued`; `approval` holds it and returns `link_requested`
   - a failed or rejected reissue does not block a new request
-  - a delayed job for a superseded `linkGeneration`, or a closed invitation, sends nothing
-  - a crash straight after the hash write resumes on retry, mints a fresh token, sends it, and the resent link works
-  - an uncertain send retried leaves only the newest link working
+  - a delayed job whose request already has a newer `live` link, or whose invitation has closed, sends nothing
+  - the provider refuses after the hash write: the message is `failed`, the original expired link still requests a reissue, and the 24-hour limit does not block it
+  - accepted, but the response was lost: reconciliation marks it `live` without minting again, and the link in the inbox works
+  - a crash before sending: the retry mints and sends a new `pending` link, and the unsent one never works
+  - confirming a link `live` supersedes older links, and a superseded link does nothing
   - a wrong date of birth shows `verification_failed`, a locked invitation shows `verification_locked`, and a gateway 401 with no reason on a protected request shows the expired-session flow: three separate tests
   - an expired invitation with a valid token and date returns `expired` with the adviser's contact and no session
   - receipt-only verification works until the link's 14 days end, then stops
@@ -720,11 +734,17 @@ It must decide retention, who can see the data, and whether identifiers are scop
 | 13 | Release scope and studio. | Accepted: v1 kinds gated at publish, "new journey" clarified, studio Angular 22 dependency. |
 | 14 | Readiness record and verification. | Accepted: owners, order, budget, verification matrix, review history. |
 
+### Sixth review (`9f1e36c`)
+
+| # | Finding | Resolution |
+| --- | --- | --- |
+| 1 | A failed reissue could leave the client without a usable link or a way to ask again. | Accepted: link records are never overwritten. A replacement is `pending` until confirmed `live`. The original expired link stays recognised for reissue until then. Uncertain sends are reconciled with the provider before minting. Tests for a refusal after the hash write and for an accepted send whose response was lost. |
+
 ### Fifth review (`1f364fc`)
 
 | # | Finding | Resolution |
 | --- | --- | --- |
-| 1 | A reissue worker could invalidate the old link and lose the replacement. | Accepted: the message records `baseGeneration` and `ownedGeneration`; a retry that owns the current generation resumes with a fresh token; superseded jobs stop; crash and uncertain-send tests added. |
+| 1 | A reissue worker could invalidate the old link and lose the replacement. | Accepted at the time with generation ownership; replaced in the sixth review by link records that are never overwritten. |
 | 2 | The gateway fallback overrode the verification errors. | Accepted: a recognised `reason` always wins; the status-only fallback applies only to protected requests with no recognised reason; three separate tests. |
 | — | Verification for an expired invitation; receipt window. | Accepted: an `expired` verification result with the adviser's contact; receipts last until the link's 14 days end, because a submitted invitation does not expire. |
 | — | UTM recording and spelling. | Accepted: recording stays in the telemetry ADR; `utm_campaign` allowlisted to `invite`, `reminder`, `reissue`; template id unified as `reissue`. |
