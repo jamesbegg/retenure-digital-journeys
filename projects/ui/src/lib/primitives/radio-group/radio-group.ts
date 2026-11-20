@@ -20,6 +20,7 @@ export class RadioGroup implements ControlValueAccessor {
   readonly options = input.required<RadioOption[]>();
   readonly hint = input<string>();
   readonly error = input<string>();
+  readonly optionErrors = input<Record<string, string>>({});
   readonly size = input<RadioGroupSize>('lg');
   readonly errorPrefix = input('Error:');
 

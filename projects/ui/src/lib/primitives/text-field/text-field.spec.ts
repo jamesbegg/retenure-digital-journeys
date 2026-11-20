@@ -213,6 +213,30 @@ describe('TextField date', () => {
     expect(control.touched).toBe(true);
   });
 
+  it.each([
+    ['Day', '14/03/1996'],
+    ['Month', '14-3-1996'],
+    ['Year', '14.03.1996'],
+    ['Day', ' 1996-03-14 '],
+  ])('fills all three parts when a full date is pasted into %s', async (name, pasted) => {
+    const { control, part } = await renderDate();
+    const user = userEvent.setup();
+    await user.click(part(name));
+    await user.paste(pasted);
+    expect(['Day', 'Month', 'Year'].map((n) => part(n).value)).toEqual(['14', '03', '1996']);
+    expect(control.value).toBe('1996-03-14');
+  });
+
+  it('pastes a single part as normal', async () => {
+    const { control, part } = await renderDate();
+    const user = userEvent.setup();
+    await user.click(part('Year'));
+    await user.paste('1996');
+    expect(part('Year').value).toBe('1996');
+    expect(part('Day').value).toBe('');
+    expect(control.value).toBe('');
+  });
+
   it('uses bday part tokens when the caller asks for bday', async () => {
     const { fixture, part } = await renderDate();
     expect(part('Day').hasAttribute('autocomplete')).toBe(false);

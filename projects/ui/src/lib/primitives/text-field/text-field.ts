@@ -118,6 +118,25 @@ export class TextField implements ControlValueAccessor, Validator {
     this.date.set(date);
     this.onChange(isoDate(date) ?? '');
   }
+
+  protected pasteDate(event: ClipboardEvent) {
+    const date = fullDate(event.clipboardData?.getData('text') ?? '');
+    if (!date) return;
+    event.preventDefault();
+    this.date.set(date);
+    this.onChange(isoDate(date) ?? '');
+  }
+}
+
+// A whole date pasted into any part: 14/03/1996, 14-3-1996, 14.03.1996, 14 03 1996 or 1996-03-14.
+function fullDate(text: string): DateParts | null {
+  const value = text.trim();
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value);
+  const uk = /^(\d{1,2})[/.\s-](\d{1,2})[/.\s-](\d{4})$/.exec(value);
+  const [year, month, day] = iso ? [iso[1], iso[2], iso[3]] : uk ? [uk[3], uk[2], uk[1]] : [];
+  return year && month && day
+    ? { day: day.padStart(2, '0'), month: month.padStart(2, '0'), year }
+    : null;
 }
 
 function isoDate({ day, month, year }: DateParts): string | null {

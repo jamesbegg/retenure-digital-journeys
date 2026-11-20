@@ -20,12 +20,14 @@ const options: RadioOption[] = [
     [options]="options"
     [hint]="hint()"
     [error]="error()"
+    [optionErrors]="optionErrors()"
     [formControl]="control"
   />`,
 })
 class Host {
   readonly hint = input<string>();
   readonly error = input<string>();
+  readonly optionErrors = input<Record<string, string>>({});
   readonly options = options;
   readonly control = new FormControl<RadioGroupValue | null>(null);
 }
@@ -181,6 +183,21 @@ describe('RadioGroup', () => {
         .some((r) => (r as HTMLInputElement).checked),
     ).toBe(false);
     expect(screen.queryByRole('textbox')).toBeNull();
+  });
+
+  it("shows an option error on that option's revealed field", async () => {
+    const { fixture } = await renderGroup();
+    await userEvent.setup().click(radio('More'));
+    fixture.componentRef.setInput('optionErrors', { more: 'Enter an amount like 250' });
+    await fixture.whenStable();
+    const amount = screen.getByRole('textbox', { name: 'How much more each month?' });
+    expect(amount.getAttribute('aria-invalid')).toBe('true');
+    const description = amount
+      .getAttribute('aria-describedby')!
+      .split(' ')
+      .map((id) => document.getElementById(id)?.textContent)
+      .join(' ');
+    expect(description).toMatch(/Error:\s*Enter an amount like 250/);
   });
 
   it('marks touched only when focus leaves the group', async () => {
