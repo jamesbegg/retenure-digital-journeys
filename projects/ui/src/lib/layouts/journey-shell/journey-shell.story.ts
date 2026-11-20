@@ -15,10 +15,6 @@ export class JourneyShellStory {
       'with-steps': 'With steps under the header',
       centred: 'Centred narrow column',
     },
-    branding: {
-      firm: 'Firm branding: header and adviser contact',
-      neutral: 'Neutral: no firm header or contact',
-    },
     state: {
       loading: 'Loading',
       ready: 'Ready',

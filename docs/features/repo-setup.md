@@ -80,7 +80,7 @@ No code exists yet. Patterns come from the canon: standalone components, `input(
   - TextField: value is a `string`. Money is digits with no separators. A date is `YYYY-MM-DD` once complete, otherwise `''`, and the control also implements `Validator`, returning `{ incompleteDate: { missing: ('day' | 'month' | 'year')[] } }`.
   - YesNo: `boolean | null`.
   - RadioGroup: `{ value: string; input?: string } | null`.
-- JourneyShell: `layout: 'default' | 'with-steps' | 'centred'`, `branding: 'firm' | 'neutral'`, `state: 'loading' | 'ready' | 'error' | 'blocked'`. Not-found is `centred` and `neutral`.
+- JourneyShell: `layout: 'default' | 'with-steps' | 'centred'`, `state: 'loading' | 'ready' | 'error' | 'blocked'`. The shell holds no branding switch: the firm's theme and details are applied once at start-up from the backend, and a page that could not load them (the generic error page) simply projects no firm header or contact. Empty header and contact landmarks are not rendered.
 - ActionBar takes `actions: ActionBarActions`, a union on `kind`:
   - `single { primary }`
   - `pair { secondary, primary }`
