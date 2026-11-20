@@ -59,7 +59,7 @@ All endpoints are under `/api/v1`, same origin, JSON, and every response carries
 | --- | --- | --- |
 | `GET /public/tenant` | `TenantResponse` | Tenant from the `Host` header. Branding only. 404 for an unknown, unverified or suspended host. |
 | `GET /journey` | `JourneyResponse` | The session's journey. |
-| `POST /journey/session` | 204 | Extends the session when the client chooses "I need more time". |
+| `POST /journey/session` | 204 | Extends the session. Called quietly when the client is active, or when an idle client chooses "I need more time". |
 | `POST /journey/submit` | `SubmitResult` | Body `SubmitBody`: every answer, once, at the end. |
 
 **No drafts.** Answers stay in the page until Submit, and nothing is stored before then, on the server or in the browser (user decision). A refresh or closed tab loses unsent answers, so the page asks before leaving. Drafts can be added later if drop-out data shows a need.
@@ -73,9 +73,10 @@ All endpoints are under `/api/v1`, same origin, JSON, and every response carries
 - `GET /public/tenant` may be cached per host.
 
 **Session timing (WCAG 2.2.1):**
-- The session has an idle limit of at least 30 minutes.
-- The app warns 2 minutes before it ends, with "I need more time", which calls `POST /journey/session`.
-- If the session has ended by the time the client submits, the backend answers 401 `sessionExpired`. The client verifies again and resubmits the answers it still holds in memory, so nothing is lost while the page stays open.
+- **Idle limit:** 30 minutes, plus an absolute cap of 4 hours however active the client is.
+- **Activity extends it quietly.** Any interaction (typing, choosing, moving between sections) calls `POST /journey/session` in the background, at most once every 5 minutes. An active client never sees a warning.
+- **Only an idle tab warns.** After about 28 minutes with no activity, the app shows a warning with "I need more time", which also calls `POST /journey/session`. A refresh on a timer is ruled out: it would keep an unattended tab on a shared device open forever.
+- **Nothing is lost if it lapses.** If the session has ended by the time the client submits, the backend answers 401 `sessionExpired`; the client verifies again and resubmits the answers still held in memory. The timeout controls security, not data loss.
 
 ### Errors
 
@@ -338,7 +339,7 @@ check answers─▶ JourneyService.submit()   POST { answers } ─▶ done scree
 - **`JourneyService`** (`src/app/journey/`):
   - Holds the journey state as signals and does the HTTP.
   - Holds answers in memory only, and asks before the page is left with unsent answers.
-  - Runs the session-timeout warning.
+  - Extends the session quietly on activity (throttled), and shows the timeout warning only when the tab is idle.
   - Shows the screen state through JourneyShell's `state` (`loading`, `ready`, `error`, `blocked`).
 - **Parsers** (`src/app/api/`): one per response. They reject an unknown `kind`, `type`, `rule` or `schemaVersion`.
 - **`QuestionRenderer`** is a pure component:
@@ -444,7 +445,9 @@ Not built in this piece.
   - one request in flight per question, latest value wins
   - submit sends every open answer once
   - a 401 on submit leads to verification and resubmits the same answers
-  - the timeout warning appears and "I need more time" extends the session
+  - activity extends the session at most once every 5 minutes, and no warning appears while the client is active
+  - an idle tab shows the warning, and "I need more time" extends the session
+  - no extension is attempted after the absolute cap
   - leaving with unsent answers asks first
   - each `ApiError` code reaches its screen
   - no answer values in logs
