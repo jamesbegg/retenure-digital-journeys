@@ -175,6 +175,8 @@ Nothing is live. The package is consumed through a `tsconfig` path in this repo.
 - **FieldMessages (internal primitive), added with YesNo.** TextField, YesNo and RadioGroup each need the same hint, error and always-present live region. Building it once beats three copies. It has a spec and a story like any component, is not exported from `public-api.ts`, and `utils/described-by.ts` builds the matching `aria-describedby`.
 - **Story layout is global.** `.ret-stack` and `.ret-cluster` in `projects/ui/src/styles/_utilities.scss` replace a stylesheet per story; the gallery frame gives the padding. Journey templates still cannot use `ret-*` classes.
 
+- **Shared validators, added to #49 at the user's request.** `utils/validators.ts`: `emailAddress`, `ukPhone`, `personName`, `dateOfBirth(minAge, maxAge)` and `moneyAmount(min, max)`. Light-touch checks that catch slips (a name in the email field, 1196 for 1996), not strict formats. Empty values pass so `Validators.required` decides; error copy comes from each question definition.
+
 ### Unresolved and blocking
 
 None.
