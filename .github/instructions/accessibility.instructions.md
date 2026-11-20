@@ -24,7 +24,7 @@ WCAG 2.2 AA is the floor. Many clients are older, use larger text settings, use 
 - **3.3.7 redundant entry.** Never ask for something the client already gave in this journey, or that the adviser already holds; show it for confirmation instead.
 - **3.3.8 accessible authentication.** Verification must not rely on a cognitive test. Allow paste into code fields and support autofill (`autocomplete="one-time-code"`).
 - **3.2.6 consistent help.** The adviser contact route sits in the same place on every screen.
-- **2.2.1 timing.** No session timeout shorter than 20 minutes without a warning and a way to extend. Drafts save so a timeout loses nothing.
+- **2.2.1 timing.** Any session time limit under 20 hours warns before it ends, gives at least 20 seconds to respond with a simple action ("I need more time"), and can be extended at least ten times. Schedule from the server's deadline, not a local timer alone. Answers are only stored on submit, so an expired session must keep them in memory and restore them after reverifying the same journey.
 - **1.3.1 / 4.1.2 structure.** One `h1` per screen. Radio and checkbox groups use `fieldset` and `legend`. Hints and errors are tied to their control with `aria-describedby`. Errors are announced.
 
 ## Plain language

@@ -18,14 +18,14 @@ One deployment serves every firm. A client must only ever see their own firm's d
 - The tenant-scoped HTTP interceptor adds the tenant id to every API call. The backend authorises it; the client header is a check, not the authority.
 - Every cache key, browser storage key, service worker cache name and in-memory store includes the tenant id.
 - Asset URLs (logo, favicon, theme) are tenant-specific and served from tenant-prefixed paths. Never cache them under a shared key.
-- Drafts are keyed by tenant, journey and invitation, and cleared on submit and sign-out.
+- There are no drafts: answers are submitted once. If drafts are added later, they are keyed by tenant, journey and invitation, and cleared on submit and sign-out.
 
 ## Branding
 
-- The theme is a set of tokens: brand colours, logo, favicon, firm display name, adviser contact defaults. It is applied to `:root` as CSS custom properties before the first branded render.
+- The theme is `TenantTheme` (`docs/features/questions-engine.md`): firm display name, logo, favicon, light and dark brand colours, and an optional self-hosted font. Asset URLs are same-origin paths under the tenant's own `/t/<tenantId>/` prefix. It is applied to `:root` as CSS custom properties before the first branded render, and reset to neutral on any failure. The adviser's contact comes with the journey, not the theme.
 - Components read tokens only. No component or screen checks which firm it is or holds a firm value.
 - Before first paint, the shell shows a neutral loading state, so a slow theme never flashes another firm's colours.
-- Emails, PDFs and share previews (`og:` tags, page title) use the same tenant theme and are covered by the same tests.
+- Emails, PDFs and the page title use the same tenant theme and are covered by the same tests. Link previews (`og:` tags) are neutral in v1, with no firm name, because crawlers do not run the app; branded previews need server rendering and come later.
 - A firm's theme is validated for contrast before it is accepted (see `accessibility.instructions.md`).
 
 ## Tests that must exist

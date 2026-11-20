@@ -26,7 +26,7 @@ Never run deploy, DNS or certificate commands unless the user's current request 
 3. The tenant theme is applied to `:root` before the first journey screen renders.
 4. The client verifies (code or knowledge check, set by the firm). The session is bound to the tenant id and the journey invitation.
 5. The journey route loads the journey definition and the questions engine output for this client and renders it with shared components.
-6. Answers save per card as drafts, scoped to tenant, journey and invitation, and submit once at the end.
+6. Answers stay in the page and submit once at the end, as one atomic, retry-safe submission. Nothing is stored before submit: no drafts, on the server or in the browser. In-app exits confirm first; the browser's own leave prompt is best-effort, so copy never promises it.
 
 ## 2) Project structure
 
@@ -41,7 +41,8 @@ Never run deploy, DNS or certificate commands unless the user's current request 
 - `projects/ui/src/styles/`: global styles built once: reset, base typography, the focus ring, `.ret-visually-hidden`.
 - `src/app/tenant/`: hostname resolution, theme application, tenant-scoped HTTP interceptor.
 - `src/app/journeys/<journey>/`: one lazy route per journey. Screens compose `ui/` components and the journey renderer.
-- `src/app/engine/`: the client-side journey renderer that maps a question definition to a component. It does not decide which questions to ask.
+- `projects/ui` question renderer: maps each question definition from the backend to one shared component and builds the form. It is a pure component (inputs and outputs, no services), so the studio preview renders exactly what clients see. It does not decide which questions to ask.
+- `src/app/journey/` and `src/app/tenant/`: the services that fetch the journey and the firm, hold state, and submit.
 - `src/app/interfaces/` and `projects/ui/src/lib/interfaces/`: every type. No `interface`, `type` or inline object type outside an `interfaces/` folder.
 
 ## 3) KISS and types
@@ -72,7 +73,7 @@ WCAG 2.2 AA is the floor, with extra care for older clients. See `accessibility.
 
 - Client answers are sensitive. Never log answer values, free text, names, emails or dates of birth. Log ids and outcomes.
 - No third-party analytics, fonts or scripts on journey pages without an ADR. Self-host fonts and icons.
-- Drafts in browser storage are scoped to tenant and invitation, hold the minimum needed, and are cleared on submit and on sign-out.
+- No answers in browser storage. If anything is ever stored in the browser, its key includes the tenant id, it holds the minimum needed, and it is cleared on submit and on sign-out.
 
 ## 9) Errors
 
