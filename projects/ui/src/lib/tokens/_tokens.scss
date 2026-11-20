@@ -1,5 +1,7 @@
 // Neutral defaults. The tenant theme (#3) overrides the --ret-brand-* slots on :root at runtime,
-// with a light and a dark primary that each meet 3:1 against their background.
+// with a light and a dark primary that each meet 4.5:1 against the background (secondary, ghost
+// and link buttons use it as text) and against --ret-brand-on-primary, including under the
+// hover and active overlays.
 :root {
   color-scheme: light dark;
 
@@ -15,10 +17,13 @@
   --ret-color-border: #6e7781;
   --ret-color-focus: #0b57d0;
   --ret-color-danger: #b42318;
+  --ret-color-on-danger: #fff;
   --ret-color-success: #1a7f37;
   --ret-color-warning: #8a5a00;
   --ret-color-info: #0b57d0;
   --ret-color-skeleton: #dfe3e8;
+  --ret-overlay-hover: rgb(0 0 0 / 8%);
+  --ret-overlay-active: rgb(0 0 0 / 15%);
 
   --ret-font-size-sm: 0.9375rem;
   --ret-font-size-md: 1.0625rem;
@@ -60,9 +65,12 @@
     --ret-color-border: #8b949e;
     --ret-color-focus: #79a8ff;
     --ret-color-danger: #ff8a80;
+    --ret-color-on-danger: #0d1117;
     --ret-color-success: #56d364;
     --ret-color-warning: #e3b341;
     --ret-color-info: #79a8ff;
     --ret-color-skeleton: #262c36;
+    --ret-overlay-hover: rgb(255 255 255 / 12%);
+    --ret-overlay-active: rgb(255 255 255 / 22%);
   }
 }
