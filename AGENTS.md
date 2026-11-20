@@ -155,18 +155,24 @@ Each rule pairs with what enforces it. When the user corrects an agent, fix the 
 | Rule | Enforced by |
 | --- | --- |
 | Stage explicit paths. Never `git commit -a`, `git add -A`, `git add -u` or `git add .`. | `.claude/hooks/bash-guard.sh` |
-| Screens compose shared components from the UI library. A screen never defines its own button, field, radio, card or notice. | judgment; planned: ESLint rule banning raw `<button>`, `<input>` and `<select>` in journey screen templates |
+| Screens compose shared components from the UI library. A screen never defines its own button, field, radio, card or notice. | `tools/check-journey-templates.mjs` (below) |
+| Journey templates use only `ret-*` elements and `section`, `form`, `h2`, `h3`, `p`, `ul`, `li` (the shell owns the `h1`). No `ng-container`, `ng-template` or structural directive. Plain elements take static attributes only, except `form` with `[formGroup]` and `(ngSubmit)`. No `style`, `[style]`, `[class]`, `[ngStyle]`, `[innerHTML]` or `ret-*` class anywhere. | `tools/check-journey-templates.mjs` in `npm run lint` |
+| Styles live in `.scss` files, never inline, so stylelint sees them. Journey templates also live in their own files. Journey components set no `host` metadata, `@HostBinding` or `@HostListener`. | `@angular-eslint/component-max-inline-declarations`; ESLint `no-restricted-syntax` on `src/app/journeys` |
+| No inline `eslint-disable` or `stylelint-disable`. A rule that needs an exception changes in config, with a reason. | ESLint `noInlineConfig`, stylelint `ignoreDisables` |
+| Journey SCSS sets layout only (`display`, `grid*`, `flex*`, `gap`, `margin*`, `order`): no colour, border, font, radius, shadow, custom property, `::ng-deep`, mixin or import. | stylelint override for `src/app/journeys/**/*.scss` |
+| Every type (`interface`, `type`, `enum`, inline object type) lives in an `interfaces/` folder. | ESLint `no-restricted-syntax` (specs excepted) |
 | Components take content through inputs. No firm name, journey name, client name or screen-specific copy inside a shared component. | judgment; planned: lint check for hard-coded copy in `ui/` templates |
-| No firm branding outside the tenant theme: no colour literal, logo path or firm name in components or screens. | planned: stylelint `color-no-hex` and `declaration-property-value-disallowed-list` outside `src/styles/tokens` |
-| Every tenant-scoped request, cache key and stored draft includes the tenant id. | planned: HTTP interceptor spec and a cross-tenant e2e spec (`e2e/tenancy.spec.ts`) |
-| Text and text containers size in `rem`. No `px` font sizes, no fixed heights on text containers. | planned: stylelint `unit-disallowed-list` for `font-size` and `line-height` |
-| No `outline: none` or zero outline. | planned: stylelint `declaration-property-value-disallowed-list` |
-| No `text-transform: uppercase` (no eyebrow labels). | planned: stylelint `declaration-property-value-disallowed-list` |
-| Every route passes axe with no serious or critical violations, and at 200% zoom has no horizontal scroll at 320 px. | planned: `e2e/a11y.spec.ts` |
-| Typed reactive forms only. No `FormsModule`, `ngModel` or hand-wired `(input)`/`(change)` value plumbing. | planned: ESLint `no-restricted-imports` |
-| Component and directive selectors use the `ret` prefix. | planned: `@angular-eslint` selector rules |
-| No `any` outside specs. | planned: `@typescript-eslint/no-explicit-any` |
+| No firm branding outside the tenant theme: no colour literal, logo path or firm name in components or screens. | stylelint `color-no-hex`, `color-named` and `function-disallowed-list` outside `projects/ui/src/lib/tokens`; logo paths and firm names are judgment |
+| Every tenant-scoped request, cache key and stored draft includes the tenant id. | planned (#3): HTTP interceptor spec; `e2e/tenancy.spec.ts` exists with both synthetic firms and is `fixme` until branding lands |
+| Text and text containers size in `rem`. No `px` font sizes, no fixed heights on text containers. | stylelint `declaration-property-unit-disallowed-list` (`px`, `pt` and viewport units in `font-size` and `font`; `px`, `pt` in `line-height`); fixed heights are judgment, with clipped `overflow: hidden` text caught by `e2e/zoom.spec.ts` |
+| No `outline: none` or zero outline. | stylelint `declaration-property-value-disallowed-list` |
+| No `text-transform: uppercase` (no eyebrow labels). | stylelint `declaration-property-value-disallowed-list` |
+| Every route passes axe with no serious or critical violations, at default and 200% text, and at 320 px with 200% text has no horizontal scroll or clipped text. | `e2e/a11y.spec.ts`, `e2e/zoom.spec.ts`; `e2e/guards.spec.ts` proves both checks catch real failures |
+| Typed reactive forms only. No `FormsModule`, `ngModel` or hand-wired `(input)`/`(change)` value plumbing. | ESLint `no-restricted-imports` (`FormsModule`, `NgModel`, `NgForm`, `NgModelGroup`, `Untyped*`); `tools/check-journey-templates.mjs` for `(input)` and `(change)` |
+| Component and directive selectors use the `ret` prefix. | `@angular-eslint/component-selector`, `@angular-eslint/directive-selector` |
+| No `any` outside specs. | `@typescript-eslint/no-explicit-any` |
 | Write "adviser", not "advisor", in copy and new identifiers. | judgment |
+| Every lint, stylelint and template check above fails on a bad example and passes on the fix. | `tools/guards.test.mjs` in `npm test` |
 | One primary action per screen. Confirm, Save or Continue is the right-hand button. | judgment (`journey-ux.instructions.md`) |
 | Two options use YesNo. Three or more use the card RadioGroup. | judgment (`journey-ux.instructions.md`) |
 | KISS: build the simplest version that meets the contract, with no extra tier, flag, guard, abstraction or machinery the contract did not ask for. Read the diff for anything removable and remove it. | judgment, with the KISS pass in `verify-change` and the `implementer` and `reviewer` roles |

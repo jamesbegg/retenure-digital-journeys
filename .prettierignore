@@ -1,0 +1,6 @@
+*.md
+package-lock.json
+/dist
+/.angular
+/playwright-report
+/test-results
