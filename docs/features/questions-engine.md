@@ -62,7 +62,7 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
 **The link:**
 - The email carries `https://<firm host>/start#t=<token>`. The token is at least 256 bits of randomness and is stored only as a hash.
 - The token sits in the fragment (after `#`), so browsers never send it to the server, the CDN logs or other sites.
-- There is one live link per invitation; resending replaces it. It stops working when the invitation is submitted or expires, or after 30 days.
+- There is one live link per invitation; resending replaces it. A link expires after 14 days. It also stops working once the invitation is submitted or the invitation itself expires.
 - The token can be used again until then: opening the email link again, or reverifying after the idle timeout, needs the token and the date of birth.
 
 **Verifying:**
@@ -73,6 +73,13 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
 - The client presses Continue, which sends `POST /client/verification` with `{ token, dateOfBirth }`.
 - **On success,** the backend creates the session (a new session id, stored server-side and only as a hash), sets the cookie, and returns `SessionResponse`. The app then loads the journey.
 - **On failure,** the backend returns 401 `verification_failed`. The response is the same whether the token or the date was wrong, so nothing leaks.
+- **Expired link, invitation still open (user decision):**
+  - The backend replaces the link and emails the new one to the lead's email address on file, never to anyone else. It answers 409 `link_reissued`.
+  - The page shows "This link has expired, so we've sent a new one to your email". No address is shown, and the date of birth is not checked.
+  - This happens only on Continue (a `POST`), never on page load, so an email scanner opening an old message cannot trigger it.
+  - There is at most one reissue per invitation per 24 hours. Within that window, the same response is shown but nothing is sent, so the inbox cannot be flooded.
+  - A forwarded old link therefore never grants access. It only sends the client a fresh link.
+- **Invitation expired or submitted:** no reissue. The client sees the calm page with the adviser's email, as for `JourneyResponse` `expired` and `submitted`.
 - **After 5 failures for one invitation,** the invitation locks and returns 403 `verification_locked`. The client sees a calm page asking them to contact their adviser. The adviser unlocks it by resending the invitation, which issues a new link.
 - The endpoint is rate limited per IP address.
 - The date of birth is compared on the server and never logged. It is the lead's, which the adviser already holds.
@@ -187,6 +194,7 @@ type ClientErrorReason =
   | 'unsupported_plan'      // 409 on /client/journey: the frozen plan uses something this client cannot render
   | 'verification_failed'   // 401 on verification: token or date of birth wrong (same response either way)
   | 'verification_locked'   // 403 on verification: too many failures; contact the adviser
+  | 'link_reissued'         // 409 on verification: the link expired and a new one was emailed (or one was sent in the last 24 hours)
   | 'forbidden_origin';     // 403
 ```
 
@@ -592,6 +600,8 @@ It must decide retention, who can see the data, and whether identifiers are scop
   - the token leaves the address bar after load
   - a wrong date of birth fails without saying which part was wrong
   - five failures lock the invitation
+  - an expired link with an open invitation reissues once per 24 hours, to the address on file, and shows the message
+  - an expired link with a submitted or expired invitation reissues nothing
 - **Backend (for its repository):**
   - a replay with the same id and payload returns the receipt
   - the same id with a different payload gets `submission_mismatch`
