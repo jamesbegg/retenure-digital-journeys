@@ -1,4 +1,3 @@
-import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, input, signal } from '@angular/core';
 import { ControlValueAccessor, ValidationErrors, Validator } from '@angular/forms';
 import {
@@ -11,7 +10,8 @@ import {
 } from '../../interfaces/text-field';
 import { nextId } from '../../utils/id';
 import { provideValidator, provideValueAccessor } from '../../utils/forms';
-import { Icon } from '../icon/icon';
+import { describedBy } from '../../utils/described-by';
+import { FieldMessages } from '../field-messages/field-messages';
 
 const DATE_PARTS: DatePart[] = ['day', 'month', 'year'];
 const EMPTY_DATE: DateParts = { day: '', month: '', year: '' };
@@ -23,7 +23,7 @@ const pence = new Intl.NumberFormat('en-GB', {
 
 @Component({
   selector: 'ret-text-field',
-  imports: [Icon, NgTemplateOutlet],
+  imports: [FieldMessages],
   templateUrl: './text-field.html',
   styleUrl: './text-field.scss',
   providers: [provideValueAccessor(() => TextField), provideValidator(() => TextField)],
@@ -40,23 +40,19 @@ export class TextField implements ControlValueAccessor, Validator {
   readonly errorPrefix = input('Error:');
 
   protected readonly id = nextId('ret-text-field');
-  protected readonly hintId = `${this.id}-hint`;
-  protected readonly errorId = `${this.id}-error`;
   protected readonly prefixId = `${this.id}-prefix`;
   protected readonly parts = DATE_PARTS;
   protected readonly text = signal('');
   protected readonly date = signal<DateParts>(EMPTY_DATE);
   protected readonly disabled = signal(false);
 
-  protected readonly describedBy = computed(
-    () =>
-      [
-        this.type() === 'money' && this.prefixId,
-        this.hint() && this.hintId,
-        this.error() && this.errorId,
-      ]
-        .filter(Boolean)
-        .join(' ') || null,
+  protected readonly describedBy = computed(() =>
+    describedBy(
+      this.id,
+      this.hint(),
+      this.error(),
+      ...(this.type() === 'money' ? [this.prefixId] : []),
+    ),
   );
   protected readonly invalidParts = computed((): DatePart[] => {
     if (!this.error()) return [];

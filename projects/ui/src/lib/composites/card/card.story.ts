@@ -7,7 +7,6 @@ import { Card } from './card';
   selector: 'ret-card-story',
   imports: [Card, KeyValuePipe],
   templateUrl: './card.story.html',
-  styleUrl: './card.story.scss',
 })
 export class CardStory {
   protected readonly variants: Variants<Card> = {

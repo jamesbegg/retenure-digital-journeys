@@ -3,3 +3,38 @@
   border-radius: var(--ret-radius);
   background: var(--ret-color-surface);
 }
+
+@mixin choice-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--ret-space-2);
+  min-block-size: var(--ret-target-lg);
+  padding: var(--ret-space-2) var(--ret-space-4);
+  border: var(--ret-border-width-strong) solid var(--ret-color-border);
+  border-radius: var(--ret-radius);
+  background: var(--ret-color-bg);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--ret-brand-primary);
+  }
+
+  &:has(:focus-visible) {
+    outline: var(--ret-focus-width) solid var(--ret-color-focus);
+    outline-offset: 2px;
+  }
+
+  &:has(:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  @media (forced-colors: active) {
+    &:has(:checked) {
+      border-color: Highlight;
+      background: Highlight;
+      color: HighlightText;
+    }
+  }
+}

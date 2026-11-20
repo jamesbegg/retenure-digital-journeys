@@ -7,7 +7,6 @@ import { ActionBar } from './action-bar';
   selector: 'ret-action-bar-story',
   imports: [ActionBar],
   templateUrl: './action-bar.story.html',
-  styleUrl: './action-bar.story.scss',
 })
 export class ActionBarStory {
   protected readonly variants: Variants<ActionBar> = {

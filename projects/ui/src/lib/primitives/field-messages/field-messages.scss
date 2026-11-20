@@ -1,0 +1,19 @@
+:host {
+  display: contents;
+}
+
+.hint {
+  color: var(--ret-color-text-muted);
+}
+
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ret-space-2);
+  color: var(--ret-color-danger);
+  font-weight: var(--ret-font-weight-bold);
+}
+
+.error:empty {
+  position: absolute;
+}

@@ -1,22 +1,22 @@
-<main>
+<main class="ret-stack">
   <h1>Icon</h1>
 
   <h2>Names (decorative, next to visible text)</h2>
-  <ul>
+  <ul class="ret-stack">
     @for (icon of variants.name | keyvalue: null; track icon.key) {
       <li><ret-icon [name]="icon.key" /> {{ icon.key }}: {{ icon.value }}</li>
     }
   </ul>
 
   <h2>Sizes</h2>
-  <ul>
+  <ul class="ret-stack">
     @for (size of variants.size | keyvalue: null; track size.key) {
       <li><ret-icon name="check" [size]="size.key" /> {{ size.value }}</li>
     }
   </ul>
 
   <h2>Tones</h2>
-  <ul>
+  <ul class="ret-stack">
     @for (tone of variants.tone | keyvalue: null; track tone.key) {
       <li><ret-icon name="circle-alert" [tone]="tone.key" /> {{ tone.value }}</li>
     }

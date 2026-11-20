@@ -1,0 +1,57 @@
+@use '../../tokens/mixins';
+
+:host {
+  display: block;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ret-space-3);
+}
+
+.field[data-variant='standalone'] {
+  @include mixins.surface;
+}
+
+.question {
+  float: inline-start;
+  inline-size: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ret-space-2);
+  font-size: var(--ret-font-size-lg);
+  font-weight: var(--ret-font-weight-bold);
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(8rem, 100%), 1fr));
+  gap: var(--ret-space-3);
+}
+
+// Before .option, so the mixin's forced-colors rule for :checked wins.
+.option:has(:checked) {
+  border-color: var(--ret-brand-primary);
+  background: var(--ret-brand-primary);
+  color: var(--ret-brand-on-primary);
+}
+
+.option {
+  @include mixins.choice-option;
+
+  justify-content: center;
+  font-weight: var(--ret-font-weight-bold);
+}
+
+[data-invalid] .option {
+  border-color: var(--ret-color-danger);
+}
+
+.choice {
+  text-align: center;
+}
+
+.choice ret-icon {
+  margin-inline-end: 0.3em;
+}

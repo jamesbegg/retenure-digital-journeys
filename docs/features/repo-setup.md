@@ -170,6 +170,11 @@ Nothing is live. The package is consumed through a `tsconfig` path in this repo.
 - **YesNo's "No closes follow-ups" belongs to QuestionCard (#35)**, which owns follow-ups. YesNo emits the value.
 - **Money shows a `£` prefix**, as the issue specifies.
 
+### Replans
+
+- **FieldMessages (internal primitive), added with YesNo.** TextField, YesNo and RadioGroup each need the same hint, error and always-present live region. Building it once beats three copies. It has a spec and a story like any component, is not exported from `public-api.ts`, and `utils/described-by.ts` builds the matching `aria-describedby`.
+- **Story layout is global.** `.ret-stack` and `.ret-cluster` in `projects/ui/src/styles/_utilities.scss` replace a stylesheet per story; the gallery frame gives the padding. Journey templates still cannot use `ret-*` classes.
+
 ### Unresolved and blocking
 
 None.

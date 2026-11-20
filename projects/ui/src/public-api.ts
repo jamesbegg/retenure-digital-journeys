@@ -10,3 +10,5 @@ export * from './lib/interfaces/action-bar';
 export * from './lib/composites/action-bar/action-bar';
 export * from './lib/interfaces/text-field';
 export * from './lib/primitives/text-field/text-field';
+export * from './lib/interfaces/yes-no';
+export * from './lib/primitives/yes-no/yes-no';
