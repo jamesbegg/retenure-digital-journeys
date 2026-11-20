@@ -78,6 +78,10 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
   - The page shows "This link has expired, so we've sent a new one to your email". No address is shown, and the date of birth is not checked.
   - This happens only on Continue (a `POST`), never on page load, so an email scanner opening an old message cannot trigger it.
   - There is at most one reissue per invitation per 24 hours. Within that window, the same response is shown but nothing is sent, so the inbox cannot be flooded.
+    - **Tracked on the invitation row as `linkReissuedAt`.**
+    - One transactional write sets `linkReissuedAt`, replaces the token hash and adds the email to the outbox.
+    - The write is conditional on `linkReissuedAt` being absent or older than 24 hours. If the condition fails, nothing is written or sent.
+    - So two concurrent presses send one email, and no counter, cache or clean-up job is needed.
   - A forwarded old link therefore never grants access. It only sends the client a fresh link.
 - **Invitation expired or submitted:** no reissue. The client sees the calm page with the adviser's email, as for `JourneyResponse` `expired` and `submitted`.
 - **After 5 failures for one invitation,** the invitation locks and returns 403 `verification_locked`. The client sees a calm page asking them to contact their adviser. The adviser unlocks it by resending the invitation, which issues a new link.
