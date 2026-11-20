@@ -1,4 +1,4 @@
-@for (layout of variants.layout | keyvalue; track layout.key) {
+@for (layout of variants.layout | keyvalue: null; track layout.key) {
   <ret-journey-shell [heading]="layout.value" [layout]="layout.key">
     <p slot="header">Hartwell Wealth</p>
     <p slot="steps">Step 2 of 4: Your plans</p>
@@ -14,7 +14,7 @@
 >
   <p>Please try the link in your email again later.</p>
 </ret-journey-shell>
-@for (state of variants.state | keyvalue; track state.key) {
+@for (state of variants.state | keyvalue: null; track state.key) {
   <ret-journey-shell [heading]="state.value" [state]="state.key">
     <p slot="header">Hartwell Wealth</p>
     <p>Something went wrong saving your answers. Your answers so far are safe.</p>

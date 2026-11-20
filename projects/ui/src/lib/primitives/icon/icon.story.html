@@ -1,0 +1,27 @@
+<main>
+  <h1>Icon</h1>
+
+  <h2>Names (decorative, next to visible text)</h2>
+  <ul>
+    @for (icon of variants.name | keyvalue: null; track icon.key) {
+      <li><ret-icon [name]="icon.key" /> {{ icon.key }}: {{ icon.value }}</li>
+    }
+  </ul>
+
+  <h2>Sizes</h2>
+  <ul>
+    @for (size of variants.size | keyvalue: null; track size.key) {
+      <li><ret-icon name="check" [size]="size.key" /> {{ size.value }}</li>
+    }
+  </ul>
+
+  <h2>Tones</h2>
+  <ul>
+    @for (tone of variants.tone | keyvalue: null; track tone.key) {
+      <li><ret-icon name="circle-alert" [tone]="tone.key" /> {{ tone.value }}</li>
+    }
+  </ul>
+
+  <h2>Meaningful (named on its own)</h2>
+  <p><ret-icon name="circle-check" tone="success" size="lg" label="Saved" /></p>
+</main>
