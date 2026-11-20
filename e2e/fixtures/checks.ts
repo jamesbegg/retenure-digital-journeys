@@ -24,8 +24,9 @@ export function reflowProblems(page: Page) {
     const clipped = [...document.querySelectorAll<HTMLElement>('body *')].filter((el) => {
       if (el.closest('.ret-visually-hidden')) return false;
       const { overflowX, overflowY } = getComputedStyle(el);
+      const scrollsOwnLine = el.matches('input, select');
       return (
-        (clips(overflowX) && el.scrollWidth > el.clientWidth + 1) ||
+        (!scrollsOwnLine && clips(overflowX) && el.scrollWidth > el.clientWidth + 1) ||
         (clips(overflowY) && el.scrollHeight > el.clientHeight + 1)
       );
     });

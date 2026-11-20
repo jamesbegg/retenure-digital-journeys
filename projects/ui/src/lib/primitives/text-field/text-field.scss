@@ -1,0 +1,110 @@
+:host {
+  display: block;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ret-space-2);
+}
+
+.label {
+  font-weight: var(--ret-font-weight-bold);
+}
+
+.hint {
+  color: var(--ret-color-text-muted);
+}
+
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ret-space-2);
+  color: var(--ret-color-danger);
+  font-weight: var(--ret-font-weight-bold);
+}
+
+.error:empty {
+  position: absolute;
+}
+
+.control {
+  display: flex;
+  align-items: stretch;
+  max-inline-size: 100%;
+}
+
+.prefix {
+  display: flex;
+  align-items: center;
+  padding-inline: var(--ret-space-3);
+  border: var(--ret-border-width-strong) solid var(--ret-color-border);
+  border-inline-end: 0;
+  border-start-start-radius: var(--ret-radius-sm);
+  border-end-start-radius: var(--ret-radius-sm);
+  background: var(--ret-color-surface);
+}
+
+.input {
+  flex: 1;
+  min-inline-size: 0;
+  inline-size: 100%;
+  min-block-size: var(--ret-target-lg);
+  padding: var(--ret-space-2) var(--ret-space-3);
+  border: var(--ret-border-width-strong) solid var(--ret-color-border);
+  border-radius: var(--ret-radius-sm);
+  background: var(--ret-color-bg);
+  font-size: var(--ret-font-size-md);
+  line-height: var(--ret-line-height);
+}
+
+.prefix + .input {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+textarea.input {
+  field-sizing: content;
+  min-block-size: calc(3lh + 2 * var(--ret-space-2));
+  resize: vertical;
+}
+
+[data-size='md'] .input {
+  min-block-size: var(--ret-target-md);
+  font-size: var(--ret-font-size-sm);
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--ret-color-danger);
+}
+
+.input:read-only {
+  border-style: dashed;
+  background: var(--ret-color-surface);
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.date {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ret-space-3);
+}
+
+.part {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ret-space-1);
+  inline-size: 4.5em;
+}
+
+.part[data-part='year'] {
+  inline-size: 6.5em;
+}
+
+.part-label {
+  font-weight: normal;
+}

@@ -1,0 +1,18 @@
+<main>
+  <h1>TextField</h1>
+  @for (type of variants.type | keyvalue: null; track type.key) {
+    <ret-text-field [label]="type.value" [type]="type.key" />
+  }
+  @for (size of variants.size | keyvalue: null; track size.key) {
+    <ret-text-field [label]="size.value" [size]="size.key" />
+  }
+  <ret-text-field label="What are your goals?" hint="One line is enough" [formControl]="filled" />
+  <ret-text-field
+    label="How much do you pay into your pension each month?"
+    type="money"
+    error="Enter the amount in pounds"
+  />
+  <ret-text-field label="Date of birth" type="date" error="Enter a year" />
+  <ret-text-field [label]="variants.readonly" [readonly]="true" />
+  <ret-text-field label="Disabled" [formControl]="disabled" />
+</main>

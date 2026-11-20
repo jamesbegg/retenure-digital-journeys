@@ -1,0 +1,83 @@
+<ng-template #messages>
+  @if (hint(); as hint) {
+    <p class="hint" [id]="hintId">{{ hint }}</p>
+  }
+  <p class="error" [id]="errorId" aria-live="polite">
+    @if (error(); as error) {
+      <ret-icon name="circle-alert" tone="danger" />
+      <span
+        ><span class="ret-visually-hidden">{{ errorPrefix() }} </span>{{ error }}</span
+      >
+    }
+  </p>
+</ng-template>
+
+@if (type() === 'date') {
+  <fieldset
+    class="field"
+    [attr.data-size]="size()"
+    [disabled]="disabled()"
+    [attr.aria-describedby]="describedBy()"
+  >
+    <legend class="label">{{ label() }}</legend>
+    <ng-container [ngTemplateOutlet]="messages" />
+    <div class="date">
+      @for (part of parts; track part) {
+        <div class="part" [attr.data-part]="part">
+          <label class="part-label" [for]="id + '-' + part">{{ dateLabels()[part] }}</label>
+          <input
+            class="input"
+            [id]="id + '-' + part"
+            inputmode="numeric"
+            [attr.autocomplete]="autocomplete() ? autocomplete() + '-' + part : null"
+            [value]="date()[part]"
+            [readOnly]="readonly()"
+            [attr.aria-invalid]="invalidParts().includes(part) || null"
+            (input)="inputDate(part, $any($event.target).value)"
+            (blur)="onTouched()"
+          />
+        </div>
+      }
+    </div>
+  </fieldset>
+} @else {
+  <div class="field" [attr.data-size]="size()">
+    <label class="label" [for]="id">{{ label() }}</label>
+    <ng-container [ngTemplateOutlet]="messages" />
+    <div class="control">
+      @if (type() === 'money') {
+        <span class="prefix" [id]="prefixId">£</span>
+      }
+      @if (type() === 'multiline') {
+        <textarea
+          class="input"
+          rows="3"
+          [id]="id"
+          [value]="text()"
+          [disabled]="disabled()"
+          [readOnly]="readonly()"
+          [attr.autocomplete]="autocomplete()"
+          [attr.aria-describedby]="describedBy()"
+          [attr.aria-invalid]="error() ? true : null"
+          (input)="inputText($any($event.target).value)"
+          (blur)="blurText()"
+        ></textarea>
+      } @else {
+        <input
+          class="input"
+          [id]="id"
+          [type]="htmlType()"
+          [attr.inputmode]="type() === 'money' ? 'decimal' : null"
+          [value]="text()"
+          [disabled]="disabled()"
+          [readOnly]="readonly()"
+          [attr.autocomplete]="autocomplete()"
+          [attr.aria-describedby]="describedBy()"
+          [attr.aria-invalid]="error() ? true : null"
+          (input)="inputText($any($event.target).value)"
+          (blur)="blurText()"
+        />
+      }
+    </div>
+  </div>
+}
