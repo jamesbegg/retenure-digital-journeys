@@ -19,6 +19,7 @@ export class Button {
   readonly disabled = input(false);
   readonly pending = input(false);
   readonly pendingLabel = input('Please wait');
+  readonly describedBy = input<string>();
   readonly pressed = output<void>();
 
   protected press(event: MouseEvent) {
