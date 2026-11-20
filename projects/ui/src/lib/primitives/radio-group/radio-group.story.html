@@ -1,0 +1,18 @@
+<main class="ret-stack">
+  <h1>RadioGroup</h1>
+  @for (size of variants.size | keyvalue: null; track size.key) {
+    <ret-radio-group [label]="size.value" [size]="size.key" [options]="options" />
+  }
+  <ret-radio-group
+    label="Selected, with an option input (money) and with-other (multiline)"
+    [options]="options"
+    [formControl]="chosen"
+  />
+  <ret-radio-group
+    label="How has your spending changed?"
+    hint="Think about the last year"
+    error="Choose an answer"
+    [options]="options"
+  />
+  <ret-radio-group label="Disabled" [options]="options" [formControl]="disabled" />
+</main>

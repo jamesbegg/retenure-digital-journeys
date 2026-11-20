@@ -12,3 +12,5 @@ export * from './lib/interfaces/text-field';
 export * from './lib/primitives/text-field/text-field';
 export * from './lib/interfaces/yes-no';
 export * from './lib/primitives/yes-no/yes-no';
+export * from './lib/interfaces/radio-group';
+export * from './lib/primitives/radio-group/radio-group';

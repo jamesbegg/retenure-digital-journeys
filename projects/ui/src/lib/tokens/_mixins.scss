@@ -32,6 +32,7 @@
 
   @media (forced-colors: active) {
     &:has(:checked) {
+      forced-color-adjust: none;
       border-color: Highlight;
       background: Highlight;
       color: HighlightText;

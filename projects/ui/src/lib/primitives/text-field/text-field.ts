@@ -105,9 +105,10 @@ export class TextField implements ControlValueAccessor, Validator {
 
   protected blurText() {
     if (this.type() === 'money') {
+      const typed = moneyValue(this.text());
       const formatted = formatMoney(this.text());
       this.text.set(formatted);
-      this.onChange(moneyValue(formatted));
+      if (moneyValue(formatted) !== typed) this.onChange(moneyValue(formatted));
     }
     this.onTouched();
   }

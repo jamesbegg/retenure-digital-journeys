@@ -141,6 +141,17 @@ describe('TextField', () => {
     expect(control.value).toBe('12.35');
   });
 
+  it('does not change the control when a stored amount is only tabbed through', async () => {
+    const { control, fixture } = await renderField({ type: 'money' });
+    control.setValue('3000');
+    await fixture.whenStable();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('textbox', { name: 'Amount' }));
+    await user.tab();
+    expect(control.dirty).toBe(false);
+    expect(control.value).toBe('3000');
+  });
+
   it('shows a stored money value formatted and keeps text it cannot read', async () => {
     const { control, fixture } = await renderField({ type: 'money' });
     control.setValue('3000');
