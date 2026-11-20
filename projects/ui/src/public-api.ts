@@ -8,3 +8,5 @@ export * from './lib/interfaces/card';
 export * from './lib/composites/card/card';
 export * from './lib/interfaces/action-bar';
 export * from './lib/composites/action-bar/action-bar';
+export * from './lib/interfaces/text-field';
+export * from './lib/primitives/text-field/text-field';

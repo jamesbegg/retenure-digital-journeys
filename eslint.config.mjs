@@ -105,7 +105,10 @@ export default defineConfig(
   },
   {
     files: ['**/*.spec.ts'],
-    rules: { '@typescript-eslint/no-explicit-any': 'off' },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@angular-eslint/component-max-inline-declarations': 'off',
+    },
   },
   {
     files: ['projects/ui/**/*.ts'],
