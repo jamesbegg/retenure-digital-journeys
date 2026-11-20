@@ -28,8 +28,8 @@ These rules come from design review of the annual check-in. They apply to every 
 
 ## Households
 
-- The lead client fills the journey in once, for both people. Copy addresses the lead by first name and says "for both of you" where it matters.
-- The other person gets a copy of the submitted answers by email.
+- One person, the respondent, fills the journey in once, for the household. It is the lead by default; the adviser can choose another member before sending. Copy addresses the respondent by first name and says "for both of you" where it matters.
+- Nobody is emailed a copy of the answers. The done screen says they have gone to the adviser.
 
 ## Held data
 
