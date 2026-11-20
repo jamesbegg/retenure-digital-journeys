@@ -3,14 +3,12 @@
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/common": "^22.3.0",
-    "@angular/core": "^22.3.0"
+    "@angular/core": "^22.3.0",
+    "lucide": "^1.77.0"
   },
   "sideEffects": false,
   "exports": {
     ".": "./src/public-api.ts"
   },
-  "private": true,
-  "dependencies": {
-    "lucide": "^1.77.0"
-  }
+  "private": true
 }
