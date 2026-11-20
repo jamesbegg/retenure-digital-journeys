@@ -1,5 +1,5 @@
 @for (layout of variants.layout | keyvalue: null; track layout.key) {
-  <ret-journey-shell [heading]="layout.value" [layout]="layout.key">
+  <ret-journey-shell [heading]="layout.value" [layout]="layout.key" branding="firm">
     <p slot="header">Hartwell Wealth</p>
     <p slot="steps">Step 2 of 4: Your plans</p>
     <p>Priya, check what Helen holds for both of you.</p>
@@ -17,7 +17,7 @@
   </ret-journey-shell>
 }
 @for (state of variants.state | keyvalue: null; track state.key) {
-  <ret-journey-shell [heading]="state.value" [state]="state.key">
+  <ret-journey-shell [heading]="state.value" [state]="state.key" branding="firm">
     <p slot="header">Hartwell Wealth</p>
     <p>Something went wrong saving your answers. Your answers so far are safe.</p>
     <p slot="actions">[Continue]</p>
