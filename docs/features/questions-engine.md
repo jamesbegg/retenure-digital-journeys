@@ -36,6 +36,21 @@ Non-goals:
    - The failure is logged by id only, never with answer values.
 6. **No compatibility layer before launch.** Nothing is live (AGENTS.md), so backend and client ship schema changes together. Revisit at launch.
 
+## Hosts and firms
+
+One deployment serves every host. The app has no per-firm routes, builds or config: it asks `GET /public/tenant` once, and the backend answers from the `Host` header.
+
+- **Host table (backend).** Each row holds `host`, `tenantId`, `canonical`, `status` (`pending` until DNS verification, then `active` or `suspended`), and `verifiedAt`. A firm can have several hosts, for example `hartwell.retenure.io` and `checkin.hartwellwealth.co.uk`. Adding a host is a new row, not a deploy.
+- **One canonical host per firm.**
+  - Invitation emails, links and `og:` tags always use the canonical host.
+  - A request to a firm's non-canonical host is answered with a 301 to the same path on the canonical host. This sends the subdomain to the firm's own domain, never the other way (`docs/agentic-memory.md`).
+  - Each host is its own origin, so a session cookie on one host is never sent to another. Keeping clients on one host avoids a second verification.
+- **Edge.**
+  - All hosts reach the same origin. `*.retenure.io` has a wildcard certificate.
+  - A custom domain is a CNAME to the shared target (for example `custom.retenure.io`). Its certificate is issued only after the firm's TXT record verifies, as #3 sets out.
+  - The CDN cache key includes the host.
+- **Unknown, pending or suspended host.** `GET /public/tenant` answers 404 `unknownHost`, and the app shows the generic error page.
+
 ## Endpoints
 
 All endpoints are under `/api/v1`, same origin, JSON, and every response carries `schemaVersion: 1`.
@@ -394,7 +409,11 @@ check answers─▶ JourneyService.submit()   POST { revision } ─▶ done scre
 
 ## Dependency order
 
-1. Backend: the five endpoints with this schema, the cookie, `Origin` and cache rules, and #5's publish-time checks.
+1. Backend:
+   - the host table and canonical redirect
+   - the five endpoints with this schema
+   - the cookie, `Origin` and cache rules
+   - #5's publish-time checks
 2. This repo:
    - the interfaces, with fixtures for the two synthetic firms
    - the parsers
@@ -424,6 +443,9 @@ check answers─▶ JourneyService.submit()   POST { revision } ─▶ done scre
   - a `tenantMismatch` gives the generic page
   - journey responses carry `Cache-Control: no-store`
 - **Backend (for its repository):**
+  - each host in the table resolves its tenant
+  - a non-canonical host redirects 301 to the canonical host with the same path
+  - a pending or suspended host gets 404
   - a write without a matching `Origin` gets 403
   - a closed-branch answer is dropped at submit
   - per-person answers never collide
