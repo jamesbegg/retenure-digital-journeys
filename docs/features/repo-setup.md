@@ -68,7 +68,7 @@ No code exists yet. Patterns come from the canon: standalone components, `input(
   - a boolean input becomes a `description`
   
   Missing or extra keys fail typecheck. The story renders an example for each entry.
-- Slots: `<ng-content select="[slot=name]">` in every component, so `<ret-action-bar slot="actions">` reads the same everywhere.
+- Slots: `<ng-content select="[slot=name]">` in every component, so `<ret-action-bar slot="actions">` reads the same everywhere. Angular still creates projected content when its slot is hidden, so a slotted component does no work in its constructor, and a caller does not project a firm header into a neutral shell.
 - Global styles, built once:
   - tokens and reset
   - base typography at `1.0625rem` with line height 1.5
