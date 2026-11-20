@@ -10,9 +10,13 @@ const slots = `
   <p slot="contact">Email Helen Hartwell</p>`;
 
 function renderShell(attrs = '', heading = 'Your check-in') {
-  return render(`<ret-journey-shell heading="${heading}" ${attrs}>${slots}</ret-journey-shell>`, {
-    imports: [JourneyShell],
-  });
+  const branding = attrs.includes('branding=') ? '' : 'branding="firm"';
+  return render(
+    `<ret-journey-shell heading="${heading}" ${branding} ${attrs}>${slots}</ret-journey-shell>`,
+    {
+      imports: [JourneyShell],
+    },
+  );
 }
 
 const h1 = (name = 'Your check-in') => screen.getByRole('heading', { level: 1, name });
@@ -110,7 +114,7 @@ describe('JourneyShell', () => {
 
   async function renderStateful(state: 'ready' | 'error') {
     const { fixture } = await render(JourneyShell, {
-      inputs: { heading: 'We could not save your answers', state },
+      inputs: { heading: 'We could not save your answers', branding: 'firm', state },
     });
     return async (next: string) => {
       fixture.componentRef.setInput('state', next);
@@ -137,14 +141,19 @@ describe('JourneyShell', () => {
   }
 
   it('leaves focus alone on first render', async () => {
-    await render(JourneyShell, { inputs: { heading: 'Your check-in', state: 'error' } });
+    await render(JourneyShell, {
+      inputs: { heading: 'Your check-in', branding: 'firm', state: 'error' },
+    });
     expect(document.activeElement).toBe(document.body);
   });
 
   it('gives each shell its own main id', async () => {
-    await render(`<ret-journey-shell heading="A" /><ret-journey-shell heading="B" />`, {
-      imports: [JourneyShell],
-    });
+    await render(
+      `<ret-journey-shell heading="A" branding="neutral" /><ret-journey-shell heading="B" branding="neutral" />`,
+      {
+        imports: [JourneyShell],
+      },
+    );
     const [a, b] = screen.getAllByRole('main');
     expect(a.id).not.toBe(b.id);
   });
