@@ -16,3 +16,6 @@ export * from './lib/interfaces/radio-group';
 export * from './lib/primitives/radio-group/radio-group';
 export * from './lib/interfaces/validators';
 export * from './lib/utils/validators';
+export * from './lib/interfaces/question';
+export * from './lib/interfaces/answer';
+export * from './lib/interfaces/journey-copy';

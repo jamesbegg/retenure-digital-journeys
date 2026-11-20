@@ -11,7 +11,7 @@ Add an entry only when it records a recurring failure mode, why a plausible appr
 Use only these fictional firms and households in fixtures, stories, screenshots and tests:
 
 - Hartwell Wealth (`hartwell.retenure.io`), adviser Helen Hartwell. Household: Priya Shah (lead) and Tom Shah.
-- Northgate Planning (`northgate.retenure.io`). Used as the second firm in tenancy specs.
+- Northgate Planning (`northgate.retenure.io`). Used as the second firm in tenancy specs. Household: Alex (lead, first name only).
 
 ## Current lessons
 

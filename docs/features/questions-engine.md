@@ -301,7 +301,9 @@ interface BrandColours {
 }
 ```
 
-- **Asset URLs.** `logo.src`, `favicon` and `font.src` must be same-origin paths under `/t/<tenantId>/`. The parser rejects any other value, including other hosts, `data:` URLs and another tenant's prefix.
+- **Asset URLs.** `logo.src`, `favicon` and `font.src` must be same-origin paths under `/t/<tenantId>/`. The parser rejects any other value, including other hosts, `data:` URLs and another tenant's prefix. Paths use only letters, digits, `.`, `_` and `-` in each segment, with no query string, so a new asset version gets a new path.
+- **Colours** are `#rrggbb`, and `font.family` is letters, digits, spaces and hyphens only, because both reach CSS. The publish check enforces the same.
+- **The parser checks a response against itself, not the host.** The client has no independent source for the tenant id, since custom domains map through the backend's host table. The backend's host resolution and `no-store` on the lookup are what stop one firm's theme reaching another firm's host.
 - **Applying the theme.** Applied once at start-up, before the first branded render, to the `--ret-brand-*` tokens, the page title and the favicon.
 - **Neutral failure.** On any tenant or journey failure, the client resets the title, favicon, tokens and all in-memory client state to neutral before showing the generic page.
 - **Link previews in v1 are neutral.** The static shell's `og:` tags say "Your check-in" with no firm name, because crawlers do not run the app. Branded previews need server rendering and come later.
@@ -534,7 +536,7 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
   - `submissionId` kept across retries
   - the leave prompt
   - JourneyShell `state` (`loading`, `ready`, `error`, `blocked`)
-- **Parsers** (`src/app/api/`): one per response, failing closed.
+- **Parsers** (`src/app/api/`): one per response, failing closed. Unknown fields are dropped and `null` counts as absent. `parseApiError` returns `null` for a body that is not the shared error shape (a gateway 401), so the caller decides from the status. A `radio` question needs at least three options (two belong to `yesNo`), validator bounds must leave a satisfiable range after defaults, timestamps must be real calendar times, and a `ParseError` names the field path but never a payload value.
 - **`QuestionRenderer`** (`@retenure/ui`):
   - A pure component: inputs and outputs, no services, so the studio preview reuses it.
   - An exhaustive `switch` on `kind`.
