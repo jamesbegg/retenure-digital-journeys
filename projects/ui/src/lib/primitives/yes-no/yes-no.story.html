@@ -11,5 +11,16 @@
   />
   <ret-yes-no label="Do you have any care needs?" icon="info" hint="Including help at home" />
   <ret-yes-no label="Have you moved house?" error="Choose yes or no" />
+  <ret-yes-no
+    label="Did Sarah start university at Leeds this September?"
+    [detail]="{ when: false, label: 'What is Sarah doing instead?' }"
+    [formControl]="withDetail"
+  />
+  <ret-yes-no
+    label="Is 07700 900123 still the best number to reach you?"
+    [detail]="{ when: false, label: 'What number should Helen use?' }"
+    detailError="Enter the number Helen should use"
+    [formControl]="detailError"
+  />
   <ret-yes-no label="Disabled" [formControl]="disabled" />
 </main>

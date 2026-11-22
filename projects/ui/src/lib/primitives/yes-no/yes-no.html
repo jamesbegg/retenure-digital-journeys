@@ -26,6 +26,7 @@
           class="ret-visually-hidden"
           [name]="id"
           [checked]="value() === option.value"
+          [attr.aria-describedby]="detailShown() && value() === option.value ? revealId : null"
           (change)="select(option.value)"
         />
         <span class="choice">
@@ -37,4 +38,15 @@
       </label>
     }
   </div>
+  @if (detailShown()) {
+    <span class="ret-visually-hidden" [id]="revealId">{{ detail()?.label }}</span>
+    <ret-text-field
+      class="detail"
+      type="multiline"
+      [label]="detail()!.label"
+      [error]="detailError()"
+      [errorPrefix]="errorPrefix()"
+      [formControl]="detailText"
+    />
+  }
 </fieldset>
