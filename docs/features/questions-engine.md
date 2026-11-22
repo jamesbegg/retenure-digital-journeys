@@ -105,7 +105,7 @@ A secure email link plus the respondent's date of birth. No accounts, no Cognito
   - **Reconcile first.** If the previous attempt's outcome is unknown, ask the provider before doing anything else, exactly as `send-due.ts` does:
     - **Accepted:** mark that attempt's link `live` (superseding older ones) and the message `sent`. Nothing new is minted.
     - **Refused, or never reached the provider:** go on to the next step.
-    - **Still unknown:** treat it as accepted, mark the link `live` and the message `sent`, and do not rotate. The client most likely has that email, and the original expired link stays recognised for reissue until then, so the client can still ask again.
+    - **Still unknown (C2, user decision):** the message becomes `failed`, the minted link stays `pending` (a pending link still verifies), nothing is superseded, and the original expired link can still request a reissue.
   - **Mint and send:** add a new `pending` link (only its hash is stored) and hand the email, the only copy of the live link, to the provider.
     - **Accepted:** the link becomes `live` and the message `sent`.
     - **Refused:** the message becomes `failed`. Its `pending` link expires unused, and no other link is affected.
@@ -130,7 +130,7 @@ A secure email link plus the respondent's date of birth. No accounts, no Cognito
 - a Lambda authoriser for `/client/*` checks the session cookie against the session table, with result caching off in v1 (TTL 0), so a revoked or expired session is refused at once
 - API Gateway's own denials (401 or 403 before a handler runs) do not go through `handleError()` and carry no application `reason`. The client's rule:
   1. An error body with a recognised `reason` is handled by that reason. This covers the public verification errors (`verification_failed`, `verification_locked`) and everything else from `handleError()`.
-  2. Only when there is no recognised `reason`, and only on protected `/client/*` requests, does the status decide: 401 is `session_expired`, 403 is forbidden.
+  2. Only when there is no recognised `reason`, and only on protected `/client/*` requests, does the status decide: 401 and 403 are both `session_expired` (C1, user decision), because the Lambda authoriser's denials arrive as 403. Every application 403 carries a reason.
   3. The public routes never use the status-only fallback. An unrecognised error there shows the generic error page.
 - `/client/tenant` and `/client/verification` are the only public `client` routes
 - those two routes carry the rate limits above
@@ -140,7 +140,7 @@ A secure email link plus the respondent's date of birth. No accounts, no Cognito
 Every journey email goes through one pipeline: invitations, reminders and link reissues, with fact finds to follow. Each goes to the respondent alone. Other platform emails keep their existing path; moving them would need its own contract. Retries and uncertain delivery follow the backend's existing transport (`src/services/email-transport/send-due.ts`).
 
 - **Templates are controlled by Retenure.**
-  - Each template has an id, a version, fixed copy with typed variables, a **send mode** (`auto` or `approval`) and a **sender** (`firmIdentity` or `adviserMailbox`).
+  - Each template has an id, a version, fixed copy with typed variables and a **send mode** (`auto` or `approval`).
   - The mode is set per template by Retenure, so any template or message can move between automatic and approved without code.
   - Per-firm overrides can be added later as an optional field.
 - **An outbound message** is one record: `tenantId`, `householdId`, `templateId`, `templateVersion`, variables, recipient, `mode` copied from the template when it was created, `requestedBy` (`system`, `adviser` or `clientAction`), and a status:
@@ -153,10 +153,8 @@ Every journey email goes through one pipeline: invitations, reminders and link r
   - The copy says it was sent automatically on behalf of the adviser and why ("…because your previous link had expired").
   - It carries no personal note from the adviser, and no answers or held data.
   - Every message, automatic or approved, appears on the household's timeline in the studio, marked automatic or approved, so an adviser is never surprised by an email in their name.
-- **Sender:**
-  - `firmIdentity` sends from the firm's verified name and domain (#3).
-  - `adviserMailbox` sends from the adviser's connected mailbox, only when the firm has opted in and the connection is live. Otherwise the message falls back to `firmIdentity`.
-- **Pilot settings:** `reissue` is `auto` with `firmIdentity`. The other templates are set when they are built.
+- **Sender (C5, user decision):** every client journey email goes from the servicing adviser's connected mailbox. There is no firm-identity sender for clients. With no live connection, the message is held for the adviser in the studio; a reissue still answers the client with `link_reissued`.
+- **Pilot settings:** `reissue` is `auto`. The other templates are set when they are built. The backend contract (my-wealth-backend `docs/features/client-journeys.md`, PR #645) owns the pipeline's detail.
 
 The client sees only two outcomes, `link_reissued` or `link_requested`. The rest is the backend's and the studio's.
 
@@ -262,7 +260,8 @@ type ClientErrorReason =
   | 'verification_locked'   // 403 on verification: too many failures; contact the adviser
   | 'link_reissued'         // 409 on verification: the link expired; a new one was sent (template mode auto)
   | 'link_requested'        // 409 on verification: the link expired; the adviser has been asked to send a new one (template mode approval)
-  | 'forbidden_origin';     // 403
+  | 'forbidden_origin'      // 403
+  | 'journey_expired';      // 409 on submission: the invitation expired before the submit (C6)
 ```
 
 - The client shows its own copy for each `reason`, never `message`.
@@ -436,15 +435,20 @@ type AnswerMatch =
   | { oneOf: string[] };           // radio: the value is one of these; checkbox: any selected value is
 
 type Question =
-  | (QuestionBase & { kind: 'yesNo'; yesLabel?: string; noLabel?: string })
+  | (QuestionBase & { kind: 'yesNo'; yesLabel?: string; noLabel?: string; detail?: YesNoDetail })
   | (QuestionBase & { kind: 'radio'; options: QuestionOption[] })
   | (QuestionBase & { kind: 'checkbox'; options: QuestionOption[] })
   | (QuestionBase & { kind: 'text'; multiline: boolean; autocomplete?: string })
-  | (QuestionBase & { kind: 'email' | 'tel'; autocomplete?: 'email' | 'tel' })
   | (QuestionBase & { kind: 'money' })
   | (QuestionBase & { kind: 'date'; autocomplete?: 'bday' })
   | (QuestionBase & { kind: 'confirmFacts'; facts: HeldFact[] })
   | (QuestionBase & { kind: 'goals'; goals: string[] });
+
+interface YesNoDetail {          // one detail box, shown when the answer equals `when`
+  when: boolean;
+  label: string;               // "What is Sarah doing instead?"
+  required: boolean;
+}
 
 interface QuestionOption {
   value: string;
@@ -480,10 +484,10 @@ type ValidatorRef =
 
 ```ts
 type AnswerValue =
-  | { kind: 'yesNo'; value: boolean }
   | { kind: 'radio'; value: string; input?: string }
   | { kind: 'checkbox'; values: string[]; inputs?: Record<string, string> }
-  | { kind: 'text' | 'email' | 'tel'; value: string }       // trimmed
+  | { kind: 'yesNo'; value: boolean; detail?: string }      // detail only when value equals detail.when
+  | { kind: 'text'; value: string }                         // trimmed
   | { kind: 'money'; value: string }                         // "1250.50": pounds, no symbol or commas
   | { kind: 'date'; value: string }                          // ISO YYYY-MM-DD
   | { kind: 'confirmFacts'; changed: { factId: string; newValue: string }[] }   // empty: all still right
@@ -505,10 +509,10 @@ interface SubmissionReceipt {
 
 | Kind | Built in, always on | Configured per question | Counts as answered |
 | --- | --- | --- | --- |
-| `yesNo` | none | `required` | `true` or `false` |
+| `yesNo` | a `detail` answer only when the value equals `detail.when`; the client clears it when the value changes | `required`, `detail.required` | `true` or `false`, and the detail text when it is shown and required (field error code `detailRequired`) |
 | `radio` | the option exists; an option input is checked by its own `required` and validators, and its error shows on that input | `required` | an option is chosen, and its required input, if any, is valid |
 | `checkbox` | the options exist | `required` | at least one option is selected |
-| `text`, `email`, `tel` | the value is trimmed | `required`, validators | non-empty after trimming |
+| `text` | the value is trimmed | `required`, validators | non-empty after trimming |
 | `money` | TextField emits a readable amount or the raw text; `moneyAmount` is attached automatically to report unreadable text | `required`, `moneyAmount` min and max | a readable amount |
 | `date` | TextField's `incompleteDate` and `invalidDate` | `required`, `dateOfBirth` | a complete, real date |
 | `confirmFacts` | none | none (always required) | the client chose Still right, or Something's changed and entered the change |
@@ -557,7 +561,7 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
 
 ## Release scope
 
-- **v1 supports these question kinds:** `yesNo`, `radio`, `text`, `email`, `tel`, `money` and `date`, the ones today's components cover.
+- **v1 supports these question kinds:** `yesNo` (with an optional detail box), `radio` (3 to 6 options, at most one with an `input`), `text`, `money` and `date`. The model writes every question from this catalogue, and the adviser's approval covers its words. Contact details are held facts, confirmed with `yesNo` plus a detail box, so there is no `email` or `tel` kind.
 - **v1 supports one block type:** `card`.
 - **v1 has no follow-ups.** They need QuestionCard (#35), so they arrive with it.
 - **Enforced in three places:**
@@ -601,6 +605,7 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
 | Journey `status: 'expired'` | A calm, branded page with the adviser's email. |
 | Journey `status: 'submitted'` with this tab's `submissionId` | The done screen: the submission went through, and only its response was lost. |
 | Journey `status: 'submitted'` with another id, or `already_submitted` | A calm page: "These answers were already sent on <date>", with the adviser's email. |
+| `journey_expired` | Reload the journey, which now returns `status: 'expired'`, and show that calm page. |
 | `submission_mismatch` | It should not happen, because the client never changes a payload under the same id. Show the generic error page and log the ids. |
 | `unsupported_plan` | The generic error page, telling the client their adviser has been told. |
 | `invalid_submission` | Go to the first question in `fieldErrors` with its message. If none of them is on screen, stay on Check your answers with a general message. |
@@ -611,6 +616,8 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
 ### Confirmed by the user
 
 - Question sets come from the backend per client; none are stored in the frontend.
+- The model writes every question for the household from a fixed catalogue; the adviser's one-press approval covers its words. Retenure owns the service categories (decided in the backend lane, recorded in backend PR #645).
+- C1, C2, C5 and C6 from the backend lane are accepted (2026-11-20).
 - Branding is set once at start-up from the backend; if the firm or journey cannot be fetched, the client sees a generic error page.
 - Submit once at the end, with no drafts.
 - Pilot: one respondent per invitation, the lead by default and changeable by the adviser before sending; no second recipient or Cc; no email on submission.

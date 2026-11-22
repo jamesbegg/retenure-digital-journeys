@@ -14,6 +14,7 @@ const reasons: readonly ClientErrorReason[] = [
   'link_reissued',
   'link_requested',
   'forbidden_origin',
+  'journey_expired',
 ];
 
 // Null when the body is not the backend's shared error shape (a gateway 401, say), and an

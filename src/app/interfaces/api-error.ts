@@ -10,7 +10,8 @@ export type ClientErrorReason =
   | 'verification_locked'
   | 'link_reissued'
   | 'link_requested'
-  | 'forbidden_origin';
+  | 'forbidden_origin'
+  | 'journey_expired';
 
 export interface FieldError {
   field: string;
