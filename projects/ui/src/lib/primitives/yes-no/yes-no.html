@@ -41,7 +41,6 @@
   @if (detailShown()) {
     <span class="ret-visually-hidden" [id]="revealId">{{ detail()?.label }}</span>
     <ret-text-field
-      class="detail"
       type="multiline"
       [label]="detail()!.label"
       [error]="detailError()"

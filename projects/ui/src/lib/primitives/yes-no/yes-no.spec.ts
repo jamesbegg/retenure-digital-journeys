@@ -172,18 +172,53 @@ describe('YesNo', () => {
     expect(radio('Yes').hasAttribute('aria-describedby')).toBe(false);
   });
 
-  it('clears the detail when the answer changes, so no stale text is sent', async () => {
+  it('sends no detail while the box is hidden, but keeps the draft for a mis-tap', async () => {
     const { control } = await renderYesNo({ detail: { when: false, label: 'Tell us more' } });
     const user = userEvent.setup();
     await user.click(screen.getByText('No'));
     await user.type(screen.getByRole('textbox', { name: 'Tell us more' }), 'Moved to Leeds');
     await user.click(screen.getByText('Yes'));
     expect(control.value).toEqual({ value: true });
+    expect(screen.queryByRole('textbox')).toBeNull();
     await user.click(screen.getByText('No'));
+    expect(
+      (screen.getByRole('textbox', { name: 'Tell us more' }) as HTMLTextAreaElement).value,
+    ).toBe('Moved to Leeds');
+    expect(control.value).toEqual({ value: false, detail: 'Moved to Leeds' });
+  });
+
+  it('never carries a stored detail over to the other answer', async () => {
+    const { control, fixture } = await renderYesNo({
+      detail: { when: false, label: 'Tell us more' },
+    });
+    control.setValue({ value: true, detail: 'old' });
+    await fixture.whenStable();
+    await userEvent.setup().click(screen.getByText('No'));
     expect(
       (screen.getByRole('textbox', { name: 'Tell us more' }) as HTMLTextAreaElement).value,
     ).toBe('');
     expect(control.value).toEqual({ value: false });
+  });
+
+  it('clears the box on reset and disables it with the control', async () => {
+    const { control, fixture } = await renderYesNo({
+      detail: { when: false, label: 'Tell us more' },
+    });
+    const user = userEvent.setup();
+    await user.click(screen.getByText('No'));
+    await user.type(screen.getByRole('textbox', { name: 'Tell us more' }), 'Moved');
+    control.disable();
+    await fixture.whenStable();
+    expect(
+      (screen.getByRole('textbox', { name: 'Tell us more' }) as HTMLTextAreaElement).matches(
+        ':disabled',
+      ),
+    ).toBe(true);
+    control.reset();
+    control.enable();
+    await fixture.whenStable();
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(control.value).toBeNull();
   });
 
   it('shows a stored detail and an error on the box', async () => {

@@ -52,7 +52,8 @@ export class YesNo implements ControlValueAccessor {
 
   writeValue(value: YesNoValue | null): void {
     this.value.set(value?.value ?? null);
-    this.detailText.setValue(value?.detail ?? '', { emitEvent: false });
+    const own = value !== null && value.value === this.detail()?.when;
+    this.detailText.setValue(own ? (value.detail ?? '') : '', { emitEvent: false });
   }
 
   registerOnChange(fn: (value: YesNoValue) => void): void {
@@ -74,7 +75,6 @@ export class YesNo implements ControlValueAccessor {
 
   protected select(value: boolean) {
     this.value.set(value);
-    if (!this.detailShown()) this.detailText.setValue('', { emitEvent: false });
     this.emit();
   }
 
