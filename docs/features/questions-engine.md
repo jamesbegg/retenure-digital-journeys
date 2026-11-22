@@ -154,6 +154,7 @@ Every journey email goes through one pipeline: invitations, reminders and link r
   - It carries no personal note from the adviser, and no answers or held data.
   - Every message, automatic or approved, appears on the household's timeline in the studio, marked automatic or approved, so an adviser is never surprised by an email in their name.
 - **Sender (C5, user decision):** every client journey email goes from the servicing adviser's connected mailbox. There is no firm-identity sender for clients. With no live connection, the message is held for the adviser in the studio; a reissue still answers the client with `link_reissued`.
+- **The invite (user decision, pilot):** we draft the subject and body; the adviser can edit both in the studio before approving. The "Start your check-in" button and its link are added by the platform, fixed at the end of the body, and cannot be edited or moved. The firm's greeting, the adviser's signature and the footer stay as the template sets them.
 - **Pilot settings:** `reissue` is `auto`. The other templates are set when they are built. The backend contract (my-wealth-backend `docs/features/client-journeys.md`, PR #645) owns the pipeline's detail.
 
 The client sees only two outcomes, `link_reissued` or `link_requested`. The rest is the backend's and the studio's.
@@ -604,7 +605,7 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
 | `session_expired`, or `expiresAt` passed | Hide the journey and show verification. Same journey: restore the answers. Different journey: discard them. |
 | Journey `status: 'expired'` | A calm, branded page with the adviser's email. |
 | Journey `status: 'submitted'` with this tab's `submissionId` | The done screen: the submission went through, and only its response was lost. |
-| Journey `status: 'submitted'` with another id, or `already_submitted` | A calm page: "These answers were already sent on <date>", with the adviser's email. |
+| Journey `status: 'submitted'` with another id, or `already_submitted` | A calm page: "This check-in has already been completed. It was sent to <adviser first name> on <date>." Then "Wasn't you? If you didn't send these answers, contact <adviser first name> straight away.", with the adviser's contact. Only the respondent can complete it, so this is where they learn if someone else did. |
 | `journey_expired` | Reload the journey, which now returns `status: 'expired'`, and show that calm page. |
 | `submission_mismatch` | It should not happen, because the client never changes a payload under the same id. Show the generic error page and log the ids. |
 | `unsupported_plan` | The generic error page, telling the client their adviser has been told. |
