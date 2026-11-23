@@ -15,6 +15,11 @@ for (const width of [390, 1280]) {
     await expect(heading(page)).toHaveText('Your annual check-in');
     expect(await box()).toMatchObject({ x: 0, y: 0, width });
 
+    const footer = (await page.locator('footer').boundingBox())!;
+    expect(footer).toMatchObject({ x: 0, width });
+    const contact = (await page.locator('ret-adviser-contact').boundingBox())!;
+    expect(contact.width).toBeLessThanOrEqual(Math.min(width - 32, 640));
+
     if (width > 768) {
       // The firm name starts where the 40rem column does.
       const firm = (await page.locator('ret-client-header .mark').boundingBox())!;

@@ -26,8 +26,7 @@
   transform: none;
 }
 
-.main,
-.footer {
+.main {
   inline-size: 100%;
   max-inline-size: calc(var(--shell-measure) + 2 * var(--ret-space-4));
   margin-inline: auto;
@@ -36,6 +35,12 @@
 
 .header {
   inline-size: 100%;
+}
+
+// Full width, so its rule runs edge to edge, with the contents kept to the column.
+.footer {
+  inline-size: 100%;
+  padding-inline: max(var(--ret-space-4), calc((100% - var(--shell-measure)) / 2));
 }
 
 .header:empty,
