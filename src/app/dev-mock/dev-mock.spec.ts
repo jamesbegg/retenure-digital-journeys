@@ -88,6 +88,7 @@ describe('dev mock', () => {
   it.each([
     ['locked', 403, 'verification_locked'],
     ['linkReissued', 409, 'link_reissued'],
+    ['linkRequested', 409, 'link_requested'],
   ])('answers verification for %s', async (scenario, status, reason) => {
     const failure = await fails(
       firstValueFrom(
@@ -123,6 +124,11 @@ describe('dev mock', () => {
       expect(JSON.stringify(result)).not.toContain('hartwell');
     },
   );
+
+  it('refuses the tenant in serverError, so no firm is named', async () => {
+    const failure = await fails(firstValueFrom(mock('?mock=serverError').get('/client/tenant')));
+    expect(failure?.status).toBe(500);
+  });
 
   it('expires the session once in sessionExpired', async () => {
     const http = mock('?mock=sessionExpired');

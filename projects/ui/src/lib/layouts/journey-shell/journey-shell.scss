@@ -62,6 +62,11 @@
   gap: var(--ret-space-4);
 }
 
+.actions {
+  display: flex;
+  flex-direction: column;
+}
+
 .footer {
   padding-block: var(--ret-space-5);
   border-block-start: var(--ret-border-width) solid var(--ret-color-divider);
@@ -83,4 +88,16 @@
 .heading-bar {
   block-size: var(--ret-font-size-2xl);
   inline-size: 60%;
+}
+
+// Rem units scale with text size, so 200% text needs twice the width before the wide layout.
+@media (width >= 48rem) {
+  .heading {
+    font-size: var(--ret-font-size-3xl);
+  }
+
+  .actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
 }

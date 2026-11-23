@@ -1,0 +1,5 @@
+<ret-check-in-frame [heading]="status().heading" [withContact]="withContact()">
+  @for (text of status().paragraphs; track $index) {
+    <p>{{ text }}</p>
+  }
+</ret-check-in-frame>

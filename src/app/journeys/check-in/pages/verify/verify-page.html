@@ -1,0 +1,27 @@
+<ret-check-in-frame
+  [heading]="copy.heading"
+  [state]="journey.stage() === 'loading' ? 'loading' : 'ready'"
+>
+  @if (journey.verificationFailed()) {
+    <ret-notice live="assertive" [heading]="copy.wrongHeading" [body]="copy.wrongBody" />
+  }
+  @if (journey.verifyUnreachable()) {
+    <ret-notice
+      tone="warning"
+      live="assertive"
+      [heading]="copy.unreachableHeading"
+      [body]="copy.unreachableBody"
+    />
+  }
+  <form class="form" [formGroup]="form" (ngSubmit)="submit()">
+    <ret-text-field
+      type="date"
+      autocomplete="bday"
+      formControlName="dateOfBirth"
+      [label]="copy.legend"
+      [hint]="copy.hint"
+      [error]="error()"
+    />
+    <ret-button type="submit" icon="check" [label]="copy.submit" [pending]="journey.busy()" />
+  </form>
+</ret-check-in-frame>
