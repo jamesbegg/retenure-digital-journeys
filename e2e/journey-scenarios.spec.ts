@@ -72,7 +72,7 @@ test('the idle warning waits for 28 minutes, and More time renews the session', 
   await expect(warning).toBeVisible();
   await warning.getByRole('button', { name: 'I need more time' }).click();
   await expect(warning).toBeHidden();
-  expect(log.filter((line) => line.includes('session renewed')).length).toBeGreaterThan(0);
+  expect(log.filter((line) => line.includes('session renewed'))).toHaveLength(1);
   // Past the original 30 minutes, the renewed session keeps the client in the journey.
   await page.clock.fastForward('05:00');
   await expect(heading(page)).toHaveText('Your annual check-in');
