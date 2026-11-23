@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 import { JourneyPage } from '../interfaces/journey';
-import { startUrl, typeDate, verify } from './journey';
+import { answerEverything, startUrl, typeDate, verify } from './journey';
 
 // Each page of the journey, reached the way a client reaches it, through the dev mock.
 export const journeyPages: JourneyPage[] = [
@@ -28,6 +28,32 @@ export const journeyPages: JourneyPage[] = [
     reach: (page) => page.goto(startUrl('serverError')).then(() => undefined),
   },
   { name: 'welcome', reach: (page) => verify(page) },
+  {
+    name: 'section',
+    reach: async (page) => {
+      await verify(page);
+      await page.getByRole('button', { name: 'Continue' }).click();
+      await page.getByRole('radio', { name: 'Yes' }).check({ force: true });
+      await page.getByLabel('What is your yearly pay at your new job?').fill('52000');
+    },
+  },
+  {
+    name: 'review',
+    reach: async (page) => {
+      await verify(page);
+      await page.getByRole('button', { name: 'Continue' }).click();
+      await answerEverything(page);
+    },
+  },
+  {
+    name: 'done',
+    reach: async (page) => {
+      await verify(page);
+      await page.getByRole('button', { name: 'Continue' }).click();
+      await answerEverything(page);
+      await page.getByRole('button', { name: /^Send to / }).click();
+    },
+  },
 ];
 
 export async function reachPage(page: Page, reach: (page: Page) => Promise<void>) {

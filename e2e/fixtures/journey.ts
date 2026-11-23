@@ -21,3 +21,61 @@ export async function verify(page: Page, mock = 'happy', firm: Firm = firms[0]) 
   await typeDate(page);
   await page.getByRole('button', { name: 'Confirm' }).click();
 }
+
+export const heading = (page: Page) => page.getByRole('heading', { level: 1 });
+
+const continueButton = (page: Page) => page.getByRole('button', { name: 'Continue' });
+
+// Answers the backend's sample journey: one section at a time, the way a client would.
+export const sampleSections = [
+  {
+    title: 'Your income',
+    answer: async (page: Page) => {
+      await page.getByRole('radio', { name: 'Yes' }).check({ force: true });
+      await page.getByLabel('What is your yearly pay at your new job?').fill('52000');
+    },
+  },
+  {
+    title: 'Your family',
+    answer: async (page: Page) => {
+      await page.getByRole('radio', { name: 'Dev' }).check({ force: true });
+    },
+  },
+  {
+    title: 'Spending',
+    answer: async (page: Page) => {
+      await typeDate(page, { day: '01', month: '05', year: '2028' });
+    },
+  },
+  {
+    title: 'Your goals',
+    answer: async (page: Page) => {
+      await page.getByRole('button', { name: 'Confirm' }).click();
+    },
+  },
+  {
+    title: 'Your contact details',
+    answer: async (page: Page) => {
+      await page.getByRole('button', { name: 'Confirm' }).click();
+    },
+  },
+  {
+    title: 'Anything else',
+    answer: async (page: Page) => {
+      await page.getByLabel('Is there anything else you want us to know?').fill('We may move.');
+    },
+  },
+];
+
+export async function answerSection(page: Page, index: number) {
+  const { title, answer } = sampleSections[index];
+  await expect(heading(page)).toHaveText(title);
+  await expect(continueButton(page)).toHaveCount(0);
+  await answer(page);
+  await continueButton(page).click();
+}
+
+export async function answerEverything(page: Page) {
+  for (let index = 0; index < sampleSections.length; index++) await answerSection(page, index);
+  await expect(heading(page)).toHaveText('Check your answers');
+}
