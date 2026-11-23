@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "status": "open",
+  "journey": {
+    "id": "journey-1",
+    "type": "annualCheckIn",
+    "title": "Your annual check-in",
+    "estimatedMinutes": 2,
+    "copy": {
+      "continue": "Continue",
+      "back": "Back",
+      "edit": "Change",
+      "submit": "Send to your adviser",
+      "submitting": "Sending",
+      "checkAnswersTitle": "Check your answers",
+      "required": "Answer this question to continue",
+      "errorPrefix": "Error:",
+      "dateLabels": {
+        "day": "Day",
+        "month": "Month",
+        "year": "Year"
+      },
+      "incompleteDate": "Enter the day, month and year",
+      "invalidDate": "Enter a date that exists",
+      "stillRight": "Yes, this is still right",
+      "somethingChanged": "No, something has changed",
+      "leaveWarning": "If you leave, your answers will not be saved",
+      "timeoutWarning": "You've been inactive. Do you need more time?",
+      "moreTime": "I need more time",
+      "followUpsCleared": "Your other answers to this question have been cleared"
+    },
+    "ending": {
+      "doneMessage": "Thank you. Your answers have gone to your adviser, who will be in touch if anything needs a conversation."
+    }
+  },
+  "client": {
+    "lead": {
+      "id": "p1",
+      "firstName": "Priya",
+      "role": "lead"
+    },
+    "members": [
+      {
+        "id": "p1",
+        "firstName": "Priya",
+        "role": "lead"
+      },
+      {
+        "id": "p2",
+        "firstName": "Dev",
+        "role": "partner"
+      }
+    ]
+  },
+  "adviser": {
+    "name": "Helen Marsh",
+    "email": "helen.marsh@hartwell.example",
+    "phone": "0113 496 0123"
+  },
+  "sections": [
+    {
+      "id": "income",
+      "title": "Your income",
+      "blocks": [
+        {
+          "type": "card",
+          "question": {
+            "id": "item-1",
+            "version": 1,
+            "personId": "p1",
+            "prompt": "Priya, how is the new job going?",
+            "required": true,
+            "kind": "text",
+            "multiline": true
+          }
+        },
+        {
+          "type": "card",
+          "question": {
+            "id": "item-2",
+            "version": 1,
+            "personId": "p1",
+            "prompt": "What is your yearly pay at your new job?",
+            "required": true,
+            "kind": "money"
+          }
+        }
+      ]
+    },
+    {
+      "id": "family",
+      "title": "Your family",
+      "blocks": [
+        {
+          "type": "card",
+          "question": {
+            "id": "item-3",
+            "version": 1,
+            "prompt": "Who will help most with the children's costs this year?",
+            "required": true,
+            "kind": "radio",
+            "options": [
+              {
+                "value": "o1",
+                "label": "Priya"
+              },
+              {
+                "value": "o2",
+                "label": "Dev"
+              },
+              {
+                "value": "o3",
+                "label": "A relative",
+                "hint": "Or a friend, for example",
+                "input": {
+                  "label": "Who is that?",
+                  "type": "text",
+                  "required": true
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "goals",
+      "title": "Your goals",
+      "blocks": [
+        {
+          "type": "card",
+          "question": {
+            "id": "item-5",
+            "version": 1,
+            "prompt": "Is this still your goal?",
+            "required": true,
+            "kind": "confirmFacts",
+            "facts": [
+              {
+                "id": "f1",
+                "label": "Retire at 60",
+                "value": "target £500,000 by 2040"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "contact",
+      "title": "Your contact details",
+      "intro": "Please check we can still reach you.",
+      "blocks": [
+        {
+          "type": "card",
+          "question": {
+            "id": "item-6",
+            "version": 1,
+            "personId": "p1",
+            "prompt": "Is this email address still right?",
+            "required": true,
+            "kind": "confirmFacts",
+            "facts": [
+              {
+                "id": "f1",
+                "label": "Priya's email address, on record",
+                "value": "priya@example.test"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "anythingElse",
+      "title": "Anything else",
+      "blocks": [
+        {
+          "type": "card",
+          "question": {
+            "id": "item-7",
+            "version": 1,
+            "prompt": "Is there anything else you want us to know?",
+            "required": true,
+            "kind": "text",
+            "multiline": true
+          }
+        },
+        {
+          "type": "card",
+          "question": {
+            "id": "added-1",
+            "version": 1,
+            "prompt": "Is there a date we should avoid?",
+            "required": false,
+            "kind": "text",
+            "multiline": true
+          }
+        }
+      ]
+    }
+  ],
+  "expiresAt": "2026-12-06T10:00:00.000Z"
+}
