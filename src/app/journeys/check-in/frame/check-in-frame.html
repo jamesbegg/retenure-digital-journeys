@@ -24,24 +24,7 @@
       [label]="labels().adviserLabel"
     />
   }
-  @if (urgentLabel(); as label) {
-    <ret-button slot="contact" variant="link" [label]="label" (pressed)="urgentOpen.set(true)" />
-  }
 </ret-journey-shell>
-
-@if (urgent(); as urgent) {
-  <ret-modal
-    placement="sheet"
-    [heading]="urgent.heading"
-    [primaryLabel]="urgent.primary"
-    [closeLabel]="labels().close"
-    [(open)]="urgentOpen"
-    (primaryPressed)="call(urgent.href)"
-  >
-    <p>{{ urgent.body }}</p>
-    <p>{{ urgent.emergency }}</p>
-  </ret-modal>
-}
 
 @if (copy(); as c) {
   <ret-modal

@@ -40,10 +40,4 @@ export interface AppCopy {
   doneNeutralTitle: string;
   sendFailedHeading: string;
   sendFailedBody: string;
-  urgent: {
-    heading: string;
-    body: string;
-    call: string;
-    emergency: string;
-  };
 }

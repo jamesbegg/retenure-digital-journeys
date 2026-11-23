@@ -35,7 +35,6 @@ describe('Verify page', () => {
   it('names no adviser, because it does not know whose check-in this is', async () => {
     await openVerify();
     expect(screen.queryByRole('group', { name: 'Your adviser' })).toBeNull();
-    expect(screen.queryByText('Something urgent or worrying you?')).toBeNull();
   });
 
   it('asks for a date when none is entered, and sends nothing', async () => {

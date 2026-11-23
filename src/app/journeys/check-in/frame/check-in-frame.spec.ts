@@ -30,26 +30,11 @@ async function openWelcome() {
 }
 
 describe('the frame around every check-in page', () => {
-  it('shows the adviser contact and the urgent link under the content', async () => {
+  it('shows the adviser contact under the content', async () => {
     await openWelcome();
     const contact = screen.getByRole('group', { name: 'Your adviser' });
     within(contact).getByText("Rather talk it through? Email me and we'll arrange a call.");
     within(contact).getByRole('link', { name: 'Email Helen Hartwell' });
-    screen.getByRole('button', { name: 'Something urgent or worrying you?' });
-  });
-
-  it('opens the urgent help sheet from the link, with a way to reach the adviser now', async () => {
-    await openWelcome();
-    await userEvent
-      .setup()
-      .click(screen.getByRole('button', { name: 'Something urgent or worrying you?' }));
-    const sheet = screen.getByRole('dialog', { name: 'Talk to Helen Hartwell now' });
-    expect(sheet.getAttribute('data-placement')).toBe('sheet');
-    within(sheet).getByText(
-      "You don't need to finish first. Your answers stay on this page while it's open.",
-    );
-    within(sheet).getByText(/call 999, or Samaritans free on 116 123/);
-    within(sheet).getByRole('button', { name: 'Email Helen Hartwell' });
   });
 
   it('warns of an idle session with the journey copy, and renews it on "I need more time"', async () => {

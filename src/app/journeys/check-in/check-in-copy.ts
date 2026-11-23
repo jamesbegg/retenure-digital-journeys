@@ -70,11 +70,4 @@ export const appCopy: AppCopy = {
   doneNeutralTitle: "Thank you. We've received your answers.",
   sendFailedHeading: "We couldn't send your answers",
   sendFailedBody: 'Nothing has been lost. Please check your connection and send them again.',
-  urgent: {
-    heading: 'Talk to {adviser} now',
-    body: "You don't need to finish first. Your answers stay on this page while it's open.",
-    call: 'Call {adviser} on {phone}',
-    emergency:
-      'If you feel unsafe or in crisis, call 999, or Samaritans free on 116 123, any time.',
-  },
 };

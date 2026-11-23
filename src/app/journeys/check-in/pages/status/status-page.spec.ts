@@ -39,7 +39,6 @@ describe('Status pages', () => {
     screen.getByRole('heading', { level: 1, name: 'This check-in link has expired' });
     screen.getByText('Helen Hartwell can send you a new one. Please get in touch.');
     screen.getByRole('link', { name: 'Email Helen Hartwell' });
-    expect(screen.queryByRole('button', { name: 'Something urgent or worrying you?' })).toBeNull();
   });
 
   it('says when an already completed check-in was sent, and what to do if it was not them', async () => {
