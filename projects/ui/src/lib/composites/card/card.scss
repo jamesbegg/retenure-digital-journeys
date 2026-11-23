@@ -22,18 +22,11 @@
   font-size: var(--ret-font-size-lg);
 }
 
-.card {
-  position: relative;
-}
-
-// A straight bar set in by the corner radius, so it never bends round the corners.
-.active::before {
-  content: '';
-  position: absolute;
-  inset-block: var(--ret-radius);
-  inset-inline-start: 0;
-  inline-size: var(--ret-space-1);
-  background: var(--ret-brand-primary);
+// Square start corners so the edge runs straight from top to bottom.
+.active {
+  border-inline-start: var(--ret-space-1) solid var(--ret-brand-primary);
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
 }
 
 .answer {

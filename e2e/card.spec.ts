@@ -12,23 +12,20 @@ test.describe('Card', () => {
     expect(padding).toBeGreaterThan(0);
   });
 
-  test('marks the active card with a straight bar, not a border that follows the corners', async ({
-    page,
-  }) => {
+  test('marks the active card with a full-height straight edge', async ({ page }) => {
     const active = page.locator('ret-card section[aria-current="true"]').first();
-    const border = await active.evaluate((el) =>
-      parseFloat(getComputedStyle(el).borderInlineStartWidth),
-    );
-    const bar = await active.evaluate((el) => {
-      const style = getComputedStyle(el, '::before');
+    const edge = await active.evaluate((el) => {
+      const style = getComputedStyle(el);
       return {
-        content: style.content,
-        top: parseFloat(style.insetBlockStart),
-        radius: parseFloat(getComputedStyle(el).borderStartStartRadius),
+        width: parseFloat(style.borderInlineStartWidth),
+        startRadius: parseFloat(style.borderStartStartRadius),
+        endRadius: parseFloat(style.borderEndStartRadius),
+        far: parseFloat(style.borderStartEndRadius),
       };
     });
-    expect(border).toBe(0);
-    expect(bar.content).not.toBe('none');
-    expect(bar.top).toBeGreaterThanOrEqual(bar.radius);
+    expect(edge.width).toBeGreaterThan(0);
+    expect(edge.startRadius).toBe(0);
+    expect(edge.endRadius).toBe(0);
+    expect(edge.far).toBeGreaterThan(0);
   });
 });
