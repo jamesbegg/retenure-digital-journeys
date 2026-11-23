@@ -350,6 +350,23 @@ describe('JourneyService', () => {
       expect(service.stage()).toBe('verify');
     });
 
+    it('drops a late renewal 401 after the session was verified again', async () => {
+      const service = start();
+      await signIn(service, 30);
+      await vi.advanceTimersByTimeAsync(10 * MINUTE);
+      document.dispatchEvent(new KeyboardEvent('keydown'));
+      const late = http.expectOne('/client/journey/session');
+      await vi.advanceTimersByTimeAsync(20 * MINUTE);
+      expect(service.stage()).toBe('verify');
+      const done = service.verify('1983-04-17');
+      await answer('/client/verification', verified());
+      await answer('/client/journey', openJourney());
+      await done;
+      late.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+      await settle();
+      expect(service.stage()).toBe('ready');
+    });
+
     it('ends in error with the tenant reset when a renewal says journey_mismatch', async () => {
       const service = start();
       const reset = vi.spyOn(TestBed.inject(TenantService), 'reset');
@@ -536,7 +553,7 @@ describe('JourneyService', () => {
         answers: [{ questionId: 'q-moved', questionVersion: 1, answer: yes }],
       });
       expect(service.stage()).toBe('done');
-      expect(service.doneName()).toBe('Priya');
+      expect(service.doneName()).toBeNull();
       expect(service.answers()).toEqual({});
     });
 
@@ -624,6 +641,60 @@ describe('JourneyService', () => {
       );
       second.error(new ProgressEvent('error'));
       await sent;
+    });
+
+    it('greets the respondent, not the lead, on done', async () => {
+      const service = start();
+      const done = service.verify('1983-04-17');
+      await answer('/client/verification', verified());
+      await answer('/client/journey', {
+        ...openJourney(),
+        client: { ...hartwellOpenJourney.client, respondentId: 'per-tom' },
+      });
+      await done;
+      service.setAnswers('sec-changes', { 'q-moved': yes });
+      const sent = service.submit();
+      await answer('/client/journey/submission', {
+        schemaVersion: 1,
+        submissionId: 'x',
+        submittedAt: NOW.toISOString(),
+      });
+      await sent;
+      expect(service.doneName()).toBe('Tom');
+    });
+
+    it('resets the submission state when a different journey is verified', async () => {
+      const service = await ready();
+      let sent = service.submit();
+      const first = http.expectOne('/client/journey/submission');
+      first.error(new ProgressEvent('error'));
+      await sent;
+      expect(service.submitProblem()).toBe('network');
+      await vi.advanceTimersByTimeAsync(30 * MINUTE);
+      const done = service.verify('1983-04-17');
+      await answer('/client/verification', verified(30, 'jrn-other-0002'));
+      await answer('/client/journey', {
+        ...openJourney(),
+        journey: { ...hartwellOpenJourney.journey, id: 'jrn-other-0002' },
+      });
+      await done;
+      expect(service.submitProblem()).toBeNull();
+      service.setAnswers('sec-changes', { 'q-moved': yes });
+      expect(service.answers()['sec-changes']).toEqual({ 'q-moved': yes });
+    });
+
+    it('drops a stale submit response after the session was replaced', async () => {
+      const service = await ready();
+      const sent = service.submit();
+      const stale = http.expectOne('/client/journey/submission');
+      await vi.advanceTimersByTimeAsync(30 * MINUTE);
+      const done = service.verify('1983-04-17');
+      await answer('/client/verification', verified());
+      await answer('/client/journey', openJourney());
+      await done;
+      stale.flush('Forbidden', { status: 403, statusText: 'Forbidden' });
+      await sent;
+      expect(service.stage()).toBe('ready');
     });
 
     it('treats a plain 500 as retryable, like a 502', async () => {

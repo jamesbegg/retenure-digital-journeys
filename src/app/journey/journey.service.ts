@@ -34,6 +34,8 @@ export class JourneyService {
   private submissionId: string | null = null;
   private expiresAt = 0;
   private renewing = false;
+  // Bumped on every verify, lapse and failure: a response from an earlier session is dropped.
+  private epoch = 0;
   private warnTimer: ReturnType<typeof setTimeout> | undefined;
   private expireTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -104,6 +106,7 @@ export class JourneyService {
 
   async verify(dateOfBirth: string): Promise<void> {
     if (!this.token) return this.stage.set('link-problem');
+    const epoch = this.newEpoch();
     this.busy.set(true);
     this.verificationFailed.set(false);
     this.verifyUnreachable.set(false);
@@ -111,6 +114,7 @@ export class JourneyService {
       const result = parseVerificationResponse(
         await this.post('/client/verification', { token: this.token, dateOfBirth }),
       );
+      if (epoch !== this.epoch) return;
       if (result.status === 'open') {
         if (this.journeyId() !== result.journeyId) this.discard();
         this.journeyId.set(result.journeyId);
@@ -121,15 +125,17 @@ export class JourneyService {
         this.finish(result);
       }
     } catch (error) {
-      this.verifyFailed(error);
+      if (epoch === this.epoch) this.verifyFailed(error);
     } finally {
-      this.busy.set(false);
+      if (epoch === this.epoch) this.busy.set(false);
     }
   }
 
   async load(): Promise<void> {
+    const epoch = this.epoch;
     try {
       const result = parseJourneyResponse(await firstValueFrom(this.http.get('/client/journey')));
+      if (epoch !== this.epoch) return;
       if (result.status !== 'open') return this.finish(result);
       if (this.journeyId() !== result.journey.id) return this.fail('journey_mismatch');
       this.journey.set(result);
@@ -137,6 +143,7 @@ export class JourneyService {
       this.stage.set('ready');
       this.track(result.expiresAt);
     } catch (error) {
+      if (epoch !== this.epoch) return;
       const { reason, status } = describe(error);
       if (this.journey() && !reason && (status === 0 || status >= 500)) {
         // Re-verifying with answers held: nothing is lost while the tab stays open.
@@ -159,6 +166,7 @@ export class JourneyService {
   async submit(): Promise<void> {
     const journey = this.journey();
     if (!journey || this.busy()) return;
+    const epoch = this.epoch;
     this.busy.set(true);
     this.submitProblem.set(null);
     this.fieldErrors.set({});
@@ -177,13 +185,15 @@ export class JourneyService {
     };
     try {
       parseSubmissionReceipt(await this.post('/client/journey/submission', body));
-      this.doneName.set(journey.client.lead.firstName);
+      if (epoch !== this.epoch) return;
+      const { respondentId, members } = journey.client;
+      this.doneName.set(members.find((m) => m.id === respondentId)?.firstName ?? null);
       this.clear();
       this.stage.set('done');
     } catch (error) {
-      await this.submitFailed(error);
+      if (epoch === this.epoch) await this.submitFailed(error);
     } finally {
-      this.busy.set(false);
+      if (epoch === this.epoch) this.busy.set(false);
     }
   }
 
@@ -194,6 +204,7 @@ export class JourneyService {
   // Also the idle warning's "I need more time".
   async renew(): Promise<void> {
     if (this.renewing) return;
+    const epoch = this.epoch;
     this.renewing = true;
     try {
       for (let attempt = 0; ; attempt++) {
@@ -201,10 +212,10 @@ export class JourneyService {
           const { expiresAt } = parseSessionResponse(
             await this.post('/client/journey/session', {}),
           );
-          // A late answer must not re-arm the timers after a lapse or a failure.
-          if (this.stage() === 'ready') this.track(expiresAt);
+          if (epoch === this.epoch) this.track(expiresAt);
           return;
         } catch (error) {
+          if (epoch !== this.epoch) return;
           // Retry once. An unexplained 401 or 403, or a passed deadline, is an expired session.
           if (this.sessionGone(error) || Date.now() >= this.expiresAt) return this.lapse();
           if (describe(error).reason) return this.protectedFailed(error);
@@ -212,8 +223,14 @@ export class JourneyService {
         }
       }
     } finally {
-      this.renewing = false;
+      if (epoch === this.epoch) this.renewing = false;
     }
+  }
+
+  private newEpoch(): number {
+    this.renewing = false;
+    this.busy.set(false);
+    return ++this.epoch;
   }
 
   // Schedules the idle warning and the deadline from the server's expiresAt, never a local count.
@@ -235,6 +252,7 @@ export class JourneyService {
   }
 
   private lapse(): void {
+    this.newEpoch();
     this.clearTimers();
     this.idleWarning.set(false);
     this.stage.set('verify');
@@ -305,6 +323,7 @@ export class JourneyService {
   }
 
   private fail(reason?: ClientErrorReason): void {
+    this.newEpoch();
     this.tenant.reset();
     this.discard();
     this.token = null;
@@ -322,6 +341,8 @@ export class JourneyService {
     this.clear();
     this.journey.set(null);
     this.submissionId = null;
+    this.submitProblem.set(null);
+    this.fieldErrors.set({});
   }
 
   private clear(): void {
