@@ -456,6 +456,15 @@ describe('QuestionRenderer', () => {
       );
     });
 
+    it('moves focus to a radio option input when that holds the error', async () => {
+      const { user, host, settle } = await renderSection(section(helper));
+      await user.click(screen.getByRole('radio', { name: 'A relative' }));
+      await settle();
+      host.renderer().showErrors();
+      await settle();
+      expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Who is that?' }));
+    });
+
     it('moves focus to the FactCard heading when that is what is missing', async () => {
       const { host, settle } = await renderSection(section(goal));
       host.renderer().showErrors();

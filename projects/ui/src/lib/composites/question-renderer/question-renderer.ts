@@ -112,9 +112,13 @@ export class QuestionRenderer {
   showErrors() {
     this.visible().forEach((item) => item.control.markAsTouched());
     const first = this.visible().findIndex((item) => item.control.invalid);
+    if (first < 0) return;
     const card = this.cards()[first]?.nativeElement;
+    const optionError = questionError(this.visible()[first], this.copy()).optionErrors;
     (
       card?.querySelector<HTMLElement>('[aria-invalid="true"]') ??
+      (optionError &&
+        card?.querySelector<HTMLElement>('.option-input input, .option-input textarea')) ??
       card?.querySelector<HTMLElement>('.heading, input, textarea')
     )?.focus();
   }
