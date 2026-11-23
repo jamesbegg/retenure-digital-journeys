@@ -44,6 +44,35 @@ describe('dev mock', () => {
     );
   });
 
+  it.each([
+    'happy',
+    'wrongDob',
+    'locked',
+    'linkReissued',
+    'alreadyCompleted',
+    'expired',
+    'sessionExpired',
+    'lostSubmit',
+  ])('serves a journey the real parser accepts in %s, for both firms', async (scenario) => {
+    for (const firm of ['hartwell', 'northgate']) {
+      TestBed.resetTestingModule();
+      const http = mock(`?mock=${scenario}&firm=${firm}`);
+      // sessionExpired refuses the first protected call once.
+      const body = await firstValueFrom(http.get('/client/journey')).catch(() =>
+        firstValueFrom(http.get('/client/journey')),
+      );
+      const journey = parseJourneyResponse(body);
+      expect(journey.status).toBe('open');
+      expect(JSON.stringify(journey)).toContain(`${firm}.example`);
+      if (firm === 'northgate') expect(JSON.stringify(journey)).not.toContain('hartwell.example');
+    }
+  });
+
+  it('serves the backend sample as the open journey', async () => {
+    const journey = parseJourneyResponse(await firstValueFrom(mock('').get('/client/journey')));
+    expect(journey.status === 'open' && journey.journey.id).toBe('journey-1');
+  });
+
   it('rejects every date but the test date in wrongDob', async () => {
     const http = mock('?mock=wrongDob');
     const wrong = await fails(

@@ -8,14 +8,13 @@ import {
 import { Observable, of, throwError } from 'rxjs';
 import {
   hartwellExpiredJourney,
-  hartwellOpenJourney,
   hartwellSubmittedJourney,
   hartwellTenant,
   northgateExpiredJourney,
-  northgateOpenJourney,
   northgateSubmittedJourney,
   northgateTenant,
 } from '../api/fixtures';
+import sample from '../api/wire-samples/journey.open-all-kinds.json';
 import { ClientErrorReason } from '../interfaces/api-error';
 import { MockFirm, MockScenario, MockVerificationBody } from '../interfaces/dev-mock';
 import { SubmissionBody } from '../interfaces/journey';
@@ -60,8 +59,18 @@ export function createDevMock(search: string, hostname: string): HttpInterceptor
     : 'hartwell';
   const tenant = firm === 'northgate' ? northgateTenant : hartwellTenant;
   const northgate = firm === 'northgate';
-  const open = northgate ? northgateOpenJourney : hartwellOpenJourney;
-  const expired = northgate ? northgateExpiredJourney : hartwellExpiredJourney;
+  // The backend's sample is the open journey. Northgate gets the same plan under its own adviser.
+  const open = northgate
+    ? {
+        ...sample,
+        journey: { ...sample.journey, id: 'journey-northgate-1' },
+        adviser: northgateExpiredJourney.adviser,
+      }
+    : sample;
+  const expired = {
+    ...(northgate ? northgateExpiredJourney : hartwellExpiredJourney),
+    journeyId: open.journey.id,
+  };
   const submittedBase = northgate ? northgateSubmittedJourney : hartwellSubmittedJourney;
   const expiresAt = () => new Date(Date.now() + 30 * 60_000).toISOString();
   let sessionExpiredOnce = scenario === 'sessionExpired';
@@ -69,6 +78,7 @@ export function createDevMock(search: string, hostname: string): HttpInterceptor
   let submissionId: string | null = null;
   const submitted = () => ({
     ...submittedBase,
+    journeyId: open.journey.id,
     ...(submissionId && { submissionId }),
   });
 

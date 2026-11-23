@@ -665,7 +665,7 @@ describe('JourneyService', () => {
 
     it('resets the submission state when a different journey is verified', async () => {
       const service = await ready();
-      let sent = service.submit();
+      const sent = service.submit();
       const first = http.expectOne('/client/journey/submission');
       first.error(new ProgressEvent('error'));
       await sent;
