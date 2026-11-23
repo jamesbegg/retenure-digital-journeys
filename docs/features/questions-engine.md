@@ -61,6 +61,8 @@ A secure email link plus the respondent's date of birth. No accounts, no Cognito
 
 **One respondent (user decision, pilot):** each invitation goes to exactly one household member, the respondent, who answers for the household. It is the lead by default; the adviser can choose another member in the studio's email step before sending. There is never a second recipient or a Cc. The link, the date of birth check, reminders and reissues all belong to the respondent.
 
+**The respondent binding.** At approval the studio sends one `respondentPersonId` (a household member) and the backend binds that member and one explicit email address, the respondent's address on file when the adviser approves, to the invitation. Verification checks that member's date of birth only (the lead's date of birth fails for a partner's invitation). Reminders and reissues go only to the bound address. If the member stops being an active member, has no date of birth, or the bound address is removed, the invitation's message is `held` with a blocker and nothing is sent: the adviser either approves the held message with another of the same member's addresses (address changes only) or withdraws and starts a new check-in (member changes). The journey response names the respondent (`client.respondentId`), so the client greets the person actually answering, who may not be the lead.
+
 **The link:**
 - The email's button links to `https://<firm host>/start?utm_medium=email&utm_campaign=<templateId>#t=<token>`. The token is at least 256 bits of randomness and is stored only as a hash.
 - **UTM (user decision):** `utm_medium=email` and `utm_campaign` set to the template id (`invite`, `reminder`, `reissue`), which tells initial emails from follow-ups.
@@ -148,7 +150,7 @@ Every journey email goes through one pipeline: invitations, reminders and link r
   - `approval` starts at `pendingApproval`, then becomes `queued` when the adviser approves, or `rejected`
   - then `sending`, then `sent` or `failed`
 - **Approval** happens in the studio, on the household. The adviser sees the rendered message and approves or rejects it.
-- **Sending** uses the outbox worker described under Submitting: it leases the record, records the attempt and sends. Delivery is at least once, with the same narrow duplicate window.
+- **Sending** uses an outbox worker: it leases the record, records the attempt and sends, following the backend's existing transport. Delivery is at least once; a crash after the provider accepted a message but before it is marked sent can cause a rare duplicate.
 - **Transparency for `auto` messages:**
   - The copy says it was sent automatically on behalf of the adviser and why ("…because your previous link had expired").
   - It carries no personal note from the adviser, and no answers or held data.
@@ -223,7 +225,7 @@ Every success response carries `schemaVersion: 1`. Errors use the backend's shar
   - **A concurrent request with the same id that loses the transaction:** the backend reads the committed receipt and returns it with 200.
   - **A different id after the journey was accepted:** 409 `already_submitted`. That could be another tab, or a lost submit that was then tried again.
   - **Response lost, then the session expired:** the client verifies again with the token and date of birth. Verification returns the receipt-only `submitted` result, and the client shows the done screen when its `submissionId` matches. If the submission never landed, verification returns `open` and the client resends the same `submissionId` and payload.
-- **Atomic.** One transaction stores the answers, the receipt and payload hash, the invitation's move to `submitted`, and the adviser's timeline entry. It is conditional on the invitation still being open.
+- **Atomic.** One transaction stores the answers, the receipt and payload hash, the invitation's move to `submitted`, and one timeline entry. The entry is **adviser-only** (never client-visible, overriding the platform default for timeline events) and holds a reference to the submission (`journeyId`, `submissionId`), not the answers; the answer text is read only through the adviser-authorised submission read. It is conditional on the invitation still being open.
 - **No email on submission (user decision, pilot).** Nobody, the respondent included, is emailed a copy of the answers: it would arrive from the adviser's mailbox before the adviser had read it. The done screen tells the respondent their answers have gone to the adviser, and the adviser sees them in the studio. A client record of their answers is a later, separate decision.
 - **The whole batch is validated against the frozen plan.** On any failure, the backend stores nothing, the invitation stays open, and it answers 400 with `fieldErrors` whose `field` is `answers.<questionId>`, or `answers` for a batch-level problem:
   - every `questionId` exists in the plan, appears once, and its `questionVersion` matches
@@ -377,8 +379,9 @@ interface JourneyCopy {        // every UI string the components take as input
 }
 
 interface ClientInfo {
-  lead: Person;                // completes the journey for the household
+  lead: Person;                // the household's lead
   members: Person[];           // everyone the answers cover, lead included
+  respondentId: string;        // the member answering for the household; must be one of members
 }
 
 interface Person {
@@ -657,7 +660,7 @@ It must decide retention, who can see the data, and whether identifiers are scop
 | Infrastructure (`my-wealth-infra`) | `X-Retenure-Host` set at the edge, the edge secret, alternate domain names and certificates for custom domains, `no-store` passed through |
 | Backend (`my-wealth-backend`) | The outbound message pipeline (templates with send mode and sender, approval states, outbox worker, timeline entries); host table; the `client` audience, Lambda authoriser, verification with lockout and the session table; the five endpoints; the session, cookie and `Origin` rules; atomic idempotent submission; whole-batch validation; the single-respondent invitation; #5 publish checks including the v1 kinds |
 | This repository | Interfaces with fixtures for the two synthetic firms; parsers; `TenantService` and its interceptor; `JourneyService`; RadioGroup `optionErrors`; TextField full-date paste; `QuestionRenderer` for the v1 kinds |
-| Studio | Angular 22 upgrade, then the preview using the shared renderer |
+| Studio | The check-in review, edit and send pages: one respondent chosen in the send step, sent as `respondentPersonId` with the approval (my-wealth-advisor-studio #193 to #195); then the Angular 22 preview using the shared renderer |
 
 **Order:** infrastructure and backend first. Then this repository's services and renderer. Journey screens go through the design gate, which is a stop point. The studio comes last.
 
@@ -719,6 +722,10 @@ It must decide retention, who can see the data, and whether identifiers are scop
   - the tenant lookup carries `no-store`
   - a concurrent double submit accepts one
   - submission sends no email, and the invitation, reminders and reissues reach the respondent only
+  - a partner's invitation goes only to the chosen address, and the lead's date of birth fails its verification
+  - a held invitation when the respondent or the bound address becomes ineligible, with nothing sent
+  - a retried submission writes exactly one adviser-only timeline entry and zero emails
+  - a journey answered by a non-lead respondent parses, and the client greets that respondent
   - batch validation for each rule above, persisting nothing on failure
   - `Origin` and edge-secret refusals
   - a host from another firm never resolves
