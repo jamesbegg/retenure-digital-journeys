@@ -153,6 +153,20 @@ describe('FactCard (question)', () => {
     within(card()).getByText('Confirmed');
   });
 
+  it('disables every control when the card is disabled mid-edit', async () => {
+    const { control, fixture, user } = await renderCard();
+    await user.click(button('Make a change'));
+    control.disable();
+    await fixture.whenStable();
+    const controls = [
+      ...within(card()).getAllByRole('textbox'),
+      button('Cancel'),
+      button('Save'),
+    ] as HTMLInputElement[];
+    expect(controls).toHaveLength(5);
+    expect(controls.every((c) => c.disabled)).toBe(true);
+  });
+
   it('shows an error message tied to the card', async () => {
     await renderCard(null, 'error="Answer this question to continue"');
     within(card()).getByText('Answer this question to continue');
@@ -204,6 +218,28 @@ describe('FactCard (summary)', () => {
     expect(within(region).getAllByRole('button')).toHaveLength(1);
     expect(within(region).queryByText('Confirmed')).toBeNull();
     expect(within(region).queryByRole('textbox')).toBeNull();
+  });
+
+  it('shows a saved note under the rows with the note label', async () => {
+    await render(
+      `<ret-fact-card variant="summary" heading="Your goals" [facts]="facts" ${copy}
+        [formControl]="control" />`,
+      {
+        imports: [FactCard, ReactiveFormsModule],
+        componentProperties: {
+          facts,
+          control: new FormControl<FactCardValue>({ changed: [], note: 'A pay rise in March' }),
+        },
+      },
+    );
+    const region = screen.getByRole('region', { name: 'Your goals' });
+    within(region).getByText('Anything I should know?');
+    within(region).getByText('A pay rise in March');
+  });
+
+  it('shows no note label when there is no note', async () => {
+    await renderSummary();
+    expect(screen.queryByText('Anything I should know?')).toBeNull();
   });
 
   it('asks to change instead of editing in place', async () => {

@@ -75,6 +75,8 @@ export class FactCard implements ControlValueAccessor {
 
   setDisabledState(disabled: boolean): void {
     this.disabled.set(disabled);
+    const edits = [...this.fields().map(({ control }) => control), this.note];
+    edits.forEach((control) => (disabled ? control.disable() : control.enable()));
   }
 
   protected blank(control: FormControl<string>) {
