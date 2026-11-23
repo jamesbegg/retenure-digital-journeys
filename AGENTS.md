@@ -96,7 +96,7 @@ Non-trivial UI work gets a visible low-fidelity layout before any template, comp
 
 ## Git
 
-- Branch from `main`, which is the base for every PR until a `develop` branch exists. Work in a worktree when other sessions share the checkout.
+- Branch from `develop`, the default branch and the base for every PR. CI runs on PRs to `develop` and on pushes to it. `main` holds released code. Work in a worktree when other sessions share the checkout.
 - Stage explicit paths. Never use `git commit -a` or `git add -A`, because other sessions may be editing the same checkout.
 - Use Conventional Commits titles (`type(scope): subject`) and push the branch after every commit.
 - Before creating a PR, run `npm run format` and inspect the resulting diff.

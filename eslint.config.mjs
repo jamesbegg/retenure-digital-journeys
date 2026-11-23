@@ -73,7 +73,7 @@ export default defineConfig(
     linterOptions: { noInlineConfig: true, reportUnusedDisableDirectives: 'off' },
   },
   {
-    ignores: ['dist/', 'out-tsc/', '.angular/', 'playwright-report/', 'test-results/'],
+    ignores: ['dist/', 'out-tsc/', '.angular/', 'playwright-report/', 'test-results/', '.claude/'],
   },
   {
     files: ['**/*.ts'],
