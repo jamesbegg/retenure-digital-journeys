@@ -31,6 +31,15 @@ describe('Done page', () => {
     screen.getByText('Helen Hartwell will be in touch.');
   });
 
+  it('puts the tick above the heading, and the line about who will be in touch below it', async () => {
+    await sendFrom(hartwellOpenJourney.client);
+    const title = screen.getByRole('heading', { level: 1 });
+    const tick = document.querySelector('ret-icon')!;
+    const body = screen.getByText('Helen Hartwell will be in touch.');
+    expect(tick.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(title.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('uses the neutral title when no respondent is named', async () => {
     await sendFrom(hartwellOpenJourney.client);
     screen.getByRole('heading', { level: 1, name: "Thank you. We've received your answers." });
