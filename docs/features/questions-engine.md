@@ -57,7 +57,9 @@ Non-goals:
 
 ## Client authentication (decided by the user)
 
-A secure email link plus the lead's date of birth. No accounts, no Cognito user, no phone needed.
+A secure email link plus the respondent's date of birth. No accounts, no Cognito user, no phone needed.
+
+**One respondent (user decision, pilot):** each invitation goes to exactly one household member, the respondent, who answers for the household. It is the lead by default; the adviser can choose another member in the studio's email step before sending. There is never a second recipient or a Cc. The link, the date of birth check, reminders and reissues all belong to the respondent.
 
 **The link:**
 - The email's button links to `https://<firm host>/start?utm_medium=email&utm_campaign=<templateId>#t=<token>`. The token is at least 256 bits of randomness and is stored only as a hash.
@@ -81,13 +83,13 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
 **Verifying:**
 - The app reads the token and removes it from the address bar (`history.replaceState`), so it is not shared by copying the address or seen over a shoulder.
 - It keeps the token in memory only, never in storage.
-- The page asks for the lead's date of birth with the TextField date control (`autocomplete="bday"`, paste allowed).
+- The page asks for the respondent's date of birth with the TextField date control (`autocomplete="bday"`, paste allowed).
 - Nothing happens when the page loads. Email security scanners open links automatically, and a `GET` must never use up a link or start a session.
 - The client presses Continue, which sends `POST /client/verification` with `{ token, dateOfBirth }`.
 - **On success,** the backend creates the session (a new session id, stored server-side and only as a hash), sets the cookie, and returns `VerificationResponse` with the `journeyId` it is bound to. The app sends that id as `X-Journey-Id` on the first journey load and every protected request after, so another tab verifying a different invitation in between cannot point this tab at the wrong household.
 - **On failure,** the backend returns 401 `verification_failed`. The response is the same whether the token or the date was wrong, so nothing leaks.
 - **Expired link, invitation still open (user decision):**
-  - The backend creates an outbound message from the `reissue` template, addressed to the lead's email on file and never to anyone else (see Outbound messages).
+  - The backend creates an outbound message from the `reissue` template, addressed to the respondent's email on file and never to anyone else (see Outbound messages).
   - The template's send mode decides the response, and the date of birth is not checked:
     - **`auto`** (the pilot setting): the message is queued. The backend answers 409 `link_reissued`, and the page says "We're sending you a new link, it should be with you shortly." (user's copy).
     - **`approval`:** the message waits for the adviser in the studio. The backend answers 409 `link_requested`. The page copy for this case is to come from the user before that mode is used.
@@ -117,7 +119,7 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
 - **Invitation submitted:** the `submitted` receipt result, as above. There is no reissue.
 - **After 5 failures for one invitation,** the invitation locks and returns 403 `verification_locked`. The client sees a calm page asking them to contact their adviser. The adviser unlocks it by resending the invitation, which issues a new link.
 - The endpoint is rate limited per IP address.
-- The date of birth is compared on the server and never logged. It is the lead's, which the adviser already holds.
+- The date of birth is compared on the server and never logged. It is the respondent's, which the adviser already holds.
 
 **WCAG 3.3.8 (accessible authentication):** recalling a date of birth counts as a cognitive function test, so it passes through the criterion's "mechanism" route: the browser can fill or paste it for the client.
 - Autofill: the three parts carry `bday-day`, `bday-month` and `bday-year`.
@@ -135,7 +137,7 @@ A secure email link plus the lead's date of birth. No accounts, no Cognito user,
 
 ## Outbound messages (backend-owned, extensible)
 
-Every journey email goes through one pipeline: invitations, reminders, link reissues and household copies, with fact finds to follow. Other platform emails keep their existing path; moving them would need its own contract. Retries and uncertain delivery follow the backend's existing transport (`src/services/email-transport/send-due.ts`).
+Every journey email goes through one pipeline: invitations, reminders and link reissues, with fact finds to follow. Each goes to the respondent alone. Other platform emails keep their existing path; moving them would need its own contract. Retries and uncertain delivery follow the backend's existing transport (`src/services/email-transport/send-due.ts`).
 
 - **Templates are controlled by Retenure.**
   - Each template has an id, a version, fixed copy with typed variables, a **send mode** (`auto` or `approval`) and a **sender** (`firmIdentity` or `adviserMailbox`).
@@ -222,11 +224,8 @@ Every success response carries `schemaVersion: 1`. Errors use the backend's shar
   - **A concurrent request with the same id that loses the transaction:** the backend reads the committed receipt and returns it with 200.
   - **A different id after the journey was accepted:** 409 `already_submitted`. That could be another tab, or a lost submit that was then tried again.
   - **Response lost, then the session expired:** the client verifies again with the token and date of birth. Verification returns the receipt-only `submitted` result, and the client shows the done screen when its `submissionId` matches. If the submission never landed, verification returns `open` and the client resends the same `submissionId` and payload.
-- **Atomic.** One transaction stores the answers, the receipt and payload hash, the invitation's move to `submitted`, and one outbox record per notification. It is conditional on the invitation still being open.
-- **Notifications are queued exactly once and delivered at least once.** A worker leases each outbox record, records the attempt, sends it and marks it sent, using the same pattern as the backend's `processProposalApplies`.
-  - If the worker crashes after the email provider has accepted a message but before marking it sent, a retry can send a duplicate.
-  - That window is accepted for a copy email. The guarantee is no lost email and at most a rare duplicate, not exactly-once delivery.
-- **The household copy never includes answers marked sensitive** (#5). Those reach the adviser only. The copy goes only to members the backend holds a verified email for.
+- **Atomic.** One transaction stores the answers, the receipt and payload hash, the invitation's move to `submitted`, and the adviser's timeline entry. It is conditional on the invitation still being open.
+- **No email on submission (user decision, pilot).** Nobody, the respondent included, is emailed a copy of the answers: it would arrive from the adviser's mailbox before the adviser had read it. The done screen tells the respondent their answers have gone to the adviser, and the adviser sees them in the studio. A client record of their answers is a later, separate decision.
 - **The whole batch is validated against the frozen plan.** On any failure, the backend stores nothing, the invitation stays open, and it answers 400 with `fieldErrors` whose `field` is `answers.<questionId>`, or `answers` for a batch-level problem:
   - every `questionId` exists in the plan, appears once, and its `questionVersion` matches
   - each answer's `kind` matches its question's
@@ -589,7 +588,7 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
 - Answers are never logged, put in a URL or sent to analytics. Logs use ids and outcomes only.
 - First names only; held facts are for the client's own household; no `libraryId`, reasons or suppressed list.
 - Prompts, hints and fact values render as text, never as HTML. Asset URLs must be under the tenant's own prefix.
-- Sensitive answers never go into the household copy.
+- No answers leave the platform by email.
 - An expired session hides the journey. A mismatched reverification discards the in-memory answers.
 
 ## Failure behaviour
@@ -614,12 +613,13 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
 - Question sets come from the backend per client; none are stored in the frontend.
 - Branding is set once at start-up from the backend; if the firm or journey cannot be fetched, the client sees a generic error page.
 - Submit once at the end, with no drafts.
+- Pilot: one respondent per invitation, the lead by default and changeable by the adviser before sending; no second recipient or Cc; no email on submission.
 - The renderer and question types live in `@retenure/ui`. Per-person answers come from plan instances with `personId`. This `TenantTheme` supersedes #3's draft.
 - The session extends quietly on activity, and only an idle tab warns.
 - Second review, simpler options:
   - no absolute session cap
   - one host per firm and no redirects in v1
-  - sensitive answers never go in the household copy
+  - no copy email of the answers (pilot: no email on submission at all)
   - screen-level behaviour belongs to the design gate
   - neutral link previews in v1
 
@@ -634,7 +634,7 @@ It must decide retention, who can see the data, and whether identifiers are scop
 
 ### Unresolved and blocking (backend owner)
 
-1. **Client auth (decided: an invitation session, with the lead's date of birth as the second step).** The backend owner adds the `client` audience to the backend canon, as described in Client authentication. The decision is made; this is the canon change still to land.
+1. **Client auth (decided: an invitation session, with the respondent's date of birth as the second step).** The backend owner adds the `client` audience to the backend canon, as described in Client authentication. The decision is made; this is the canon change still to land.
 2. **Route namespace.** Confirm `/client/*` as the new audience.
 3. **The edge secret mechanism, decided with infrastructure:** a secret header checked by the backend, or an API Gateway resource policy.
 
@@ -647,7 +647,7 @@ It must decide retention, who can see the data, and whether identifiers are scop
 | Owner | Work |
 | --- | --- |
 | Infrastructure (`my-wealth-infra`) | `X-Retenure-Host` set at the edge, the edge secret, alternate domain names and certificates for custom domains, `no-store` passed through |
-| Backend (`my-wealth-backend`) | The outbound message pipeline (templates with send mode and sender, approval states, outbox worker, timeline entries); host table; the `client` audience, Lambda authoriser, verification with lockout and the session table; the five endpoints; the session, cookie and `Origin` rules; atomic idempotent submission with its outbox; whole-batch validation; the household copy filter; #5 publish checks including the v1 kinds |
+| Backend (`my-wealth-backend`) | The outbound message pipeline (templates with send mode and sender, approval states, outbox worker, timeline entries); host table; the `client` audience, Lambda authoriser, verification with lockout and the session table; the five endpoints; the session, cookie and `Origin` rules; atomic idempotent submission; whole-batch validation; the single-respondent invitation; #5 publish checks including the v1 kinds |
 | This repository | Interfaces with fixtures for the two synthetic firms; parsers; `TenantService` and its interceptor; `JourneyService`; RadioGroup `optionErrors`; TextField full-date paste; `QuestionRenderer` for the v1 kinds |
 | Studio | Angular 22 upgrade, then the preview using the shared renderer |
 
@@ -710,7 +710,7 @@ It must decide retention, who can see the data, and whether identifiers are scop
   - a frozen plan with an unsupported kind gets `unsupported_plan`
   - the tenant lookup carries `no-store`
   - a concurrent double submit accepts one
-  - the household email is sent once, and never includes sensitive answers
+  - submission sends no email, and the invitation, reminders and reissues reach the respondent only
   - batch validation for each rule above, persisting nothing on failure
   - `Origin` and edge-secret refusals
   - a host from another firm never resolves
