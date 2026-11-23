@@ -31,31 +31,23 @@
   line-height: var(--ret-line-height);
 }
 
-// A money field is one control: the pound sign sits inside the same border as the amount.
+// A money field is one control: the amount's own border and focus ring go round the pound sign.
 .control:has(.prefix) {
-  border: var(--ret-border-width-strong) solid var(--ret-color-border);
-  border-radius: var(--ret-radius-sm);
-  background: var(--ret-color-bg);
-}
-
-.control:has(.prefix):has(.input[aria-invalid='true']) {
-  border-color: var(--ret-color-danger);
+  position: relative;
 }
 
 .prefix {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--ret-space-3);
   display: flex;
   align-items: center;
-  padding-inline-start: var(--ret-space-3);
+  font-size: var(--ret-font-size-md);
+  pointer-events: none;
 }
 
 .prefix + .input {
-  padding-inline-start: var(--ret-space-1);
-  border: 0;
-  background: transparent;
-}
-
-.prefix + .input:focus-visible {
-  outline-offset: calc(-1 * var(--ret-focus-width));
+  padding-inline-start: calc(var(--ret-space-3) + 1em + var(--ret-space-2));
 }
 
 textarea.input {
