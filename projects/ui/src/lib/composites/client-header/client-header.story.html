@@ -1,0 +1,18 @@
+<main class="ret-stack">
+  <h1>ClientHeader</h1>
+  @for (layout of variants.layout | keyvalue: null; track layout.key) {
+    <h2>{{ layout.value }}</h2>
+    <ret-client-header
+      [layout]="layout.key"
+      firmName="Hartwell Wealth Planning"
+      firmMark="HW"
+      backLabel="Back"
+      backHref="#"
+      [progress]="progress"
+    />
+  }
+  <h2>No progress: the firm mark and name, with a Back button</h2>
+  <ret-client-header firmName="Hartwell Wealth Planning" firmMark="HW" backLabel="Back" />
+  <h2>No progress and no Back</h2>
+  <ret-client-header firmName="Hartwell Wealth Planning" firmMark="HW" />
+</main>

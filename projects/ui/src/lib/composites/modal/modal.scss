@@ -1,0 +1,50 @@
+@use '../../tokens/mixins';
+
+:host {
+  display: contents;
+}
+
+.dialog {
+  @include mixins.surface;
+
+  inline-size: min(30rem, calc(100% - 2 * var(--ret-space-4)));
+  max-block-size: calc(100dvh - 2 * var(--ret-space-4));
+  margin: auto;
+  padding: var(--ret-space-5);
+  border: var(--ret-border-width) solid var(--ret-color-divider);
+  box-shadow: var(--ret-shadow-modal);
+  color: var(--ret-color-text);
+  overflow: auto;
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ret-space-4);
+}
+
+.dialog::backdrop {
+  background: var(--ret-overlay-backdrop);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ret-space-4);
+}
+
+.heading {
+  font-size: var(--ret-font-size-lg);
+}
+
+.body {
+  color: var(--ret-color-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--ret-space-2);
+}

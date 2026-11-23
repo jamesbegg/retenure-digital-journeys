@@ -1,0 +1,17 @@
+<main class="ret-stack">
+  <h1>Badge</h1>
+  @for (size of variants.size | keyvalue: null; track size.key) {
+    <h2>{{ size.value }}</h2>
+    <ul class="ret-cluster">
+      @for (tone of variants.tone | keyvalue: null; track tone.key) {
+        <li><ret-badge [label]="tone.value" [tone]="tone.key" [size]="size.key" /></li>
+      }
+    </ul>
+  }
+  <h2>Icons</h2>
+  <ul class="ret-cluster">
+    @for (icon of variants.icon | keyvalue: null; track icon.key) {
+      <li><ret-badge [label]="icon.key" tone="info" [icon]="icon.key" /></li>
+    }
+  </ul>
+</main>

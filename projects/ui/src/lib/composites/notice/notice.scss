@@ -1,0 +1,60 @@
+:host {
+  display: block;
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ret-space-3);
+  padding: var(--ret-space-3) var(--ret-space-4);
+  border-radius: var(--ret-radius);
+  background: var(--ret-color-surface-muted);
+  font-size: var(--ret-font-size-sm);
+}
+
+ret-icon {
+  margin-block-start: 0.125rem;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ret-space-1);
+  min-inline-size: 0;
+}
+
+.heading {
+  font-weight: var(--ret-font-weight-bold);
+}
+
+:host([data-tone='info']) .notice {
+  background: var(--ret-color-info-soft);
+}
+
+:host([data-tone='success']) .notice {
+  background: var(--ret-color-success-soft);
+}
+
+:host([data-tone='warning']) .notice {
+  background: var(--ret-color-warning-soft);
+}
+
+:host([data-tone='danger']) .notice {
+  background: var(--ret-color-danger-soft);
+}
+
+:host([data-tone='info']) .heading {
+  color: var(--ret-color-info);
+}
+
+:host([data-tone='success']) .heading {
+  color: var(--ret-color-success);
+}
+
+:host([data-tone='warning']) .heading {
+  color: var(--ret-color-warning);
+}
+
+:host([data-tone='danger']) .heading {
+  color: var(--ret-color-danger);
+}

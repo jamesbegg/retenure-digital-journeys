@@ -1,0 +1,26 @@
+<div class="contact" role="group" [attr.aria-label]="label()">
+  @if (variant() === 'full') {
+    <div class="who">
+      <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+      <div class="name">
+        <span class="adviser">{{ name() }}</span>
+        @if (jobTitle(); as text) {
+          <span class="job-title">{{ text }}</span>
+        }
+      </div>
+    </div>
+    <p>{{ contactLine() }}</p>
+    <div class="links">
+      <a class="link" [href]="'mailto:' + email()"> <ret-icon name="mail" />{{ emailLabel() }} </a>
+      @if (phone(); as number) {
+        <a class="link" [href]="'tel:' + tel()"><ret-icon name="phone" />{{ number }}</a>
+      }
+    </div>
+  } @else {
+    <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+    <p class="line">{{ contactLine() }}</p>
+    <a class="link icon-link" [href]="'mailto:' + email()" [attr.aria-label]="emailLabel()">
+      <ret-icon name="mail" />
+    </a>
+  }
+</div>

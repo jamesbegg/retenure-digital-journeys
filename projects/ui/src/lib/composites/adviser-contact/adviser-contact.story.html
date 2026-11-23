@@ -1,0 +1,24 @@
+<main class="ret-stack">
+  <h1>AdviserContact</h1>
+  @for (variant of variants.variant | keyvalue: null; track variant.key) {
+    <h2>{{ variant.value }}</h2>
+    <ret-adviser-contact
+      [variant]="variant.key"
+      name="Helen Marsh"
+      initials="HM"
+      jobTitle="Your financial adviser, Hartwell Wealth Planning"
+      email="helen.marsh@hartwell.example"
+      phone="0113 496 0123"
+      emailLabel="Email Helen"
+      contactLine="Rather talk it through? Email me and we'll arrange a call."
+    />
+  }
+  <h2>Without a phone number or role</h2>
+  <ret-adviser-contact
+    name="Helen Marsh"
+    initials="HM"
+    email="helen.marsh@hartwell.example"
+    emailLabel="Email Helen"
+    contactLine="Rather talk it through? Email me and we'll arrange a call."
+  />
+</main>

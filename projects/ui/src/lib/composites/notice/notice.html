@@ -1,0 +1,9 @@
+<div class="notice" [attr.role]="role()">
+  <ret-icon [name]="icon()" [tone]="iconTone()" />
+  <div class="text">
+    @if (heading(); as text) {
+      <p class="heading">{{ text }}</p>
+    }
+    <p>{{ body() }}</p>
+  </div>
+</div>

@@ -31,7 +31,7 @@ Never run deploy, DNS or certificate commands unless the user's current request 
 ## 2) Project structure
 
 - `projects/ui/src/lib/`: the `@retenure/ui` library, in layers. A layer imports its own layer or a lower one, never a higher one:
-  - `tokens/`: CSS custom properties (neutral, light and dark, brand slots) and SCSS mixins. The only place a raw colour may appear.
+  - `tokens/`: CSS custom properties (neutral light client theme, brand slots) and SCSS mixins. The only place a raw colour may appear.
   - `interfaces/` and `utils/`: types and small shared helpers.
   - `primitives/`: Icon, Button, TextField, YesNo, RadioGroup, CheckboxGroup, Select, Toggle, Badge, CodeInput.
   - `composites/`: Card, ActionBar, Notice, Steps, ProgressBar, FactCard, ConfirmItem, QuestionCard, AdviserContact, ClientHeader.

@@ -1,0 +1,23 @@
+<div class="bar" [class.with-progress]="progress()">
+  @if (backLabel(); as label) {
+    @if (backHref(); as href) {
+      <a class="back" [href]="href" [attr.aria-label]="label"><ret-icon name="arrow-left" /></a>
+    } @else {
+      <button class="back" type="button" [attr.aria-label]="label" (click)="back.emit()">
+        <ret-icon name="arrow-left" />
+      </button>
+    }
+  }
+  @if (progress(); as p) {
+    <ret-progress-bar
+      class="progress"
+      [label]="p.label"
+      [step]="p.step"
+      [total]="p.total"
+      [meta]="p.meta ?? ''"
+    />
+  } @else {
+    <span class="mark" aria-hidden="true">{{ firmMark() }}</span>
+    <span class="firm">{{ firmName() }}</span>
+  }
+</div>

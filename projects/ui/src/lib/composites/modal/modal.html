@@ -1,0 +1,25 @@
+<dialog #dialog class="dialog" [attr.aria-labelledby]="headingId" (close)="closed()">
+  <div class="head">
+    <h2 class="heading" [id]="headingId">{{ heading() }}</h2>
+    <ret-button
+      variant="ghost"
+      icon="x"
+      iconPosition="only"
+      [label]="closeLabel()"
+      (pressed)="dialog.close()"
+    />
+  </div>
+  <div class="body"><ng-content /></div>
+  <div class="actions">
+    <ret-button
+      variant="secondary"
+      [label]="secondaryLabel()"
+      (pressed)="secondaryPressed.emit()"
+    />
+    <ret-button
+      [variant]="tone() === 'danger' ? 'danger' : 'primary'"
+      [label]="primaryLabel()"
+      (pressed)="primaryPressed.emit()"
+    />
+  </div>
+</dialog>

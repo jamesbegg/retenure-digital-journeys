@@ -1,0 +1,23 @@
+<div class="text">
+  <span class="label">{{ label() }}</span>
+  @if (meta()) {
+    <span class="meta">{{ meta() }}</span>
+  }
+</div>
+<div
+  class="track"
+  role="progressbar"
+  aria-valuemin="0"
+  [attr.aria-valuemax]="total()"
+  [attr.aria-valuenow]="step()"
+  [attr.aria-label]="label()"
+  [attr.data-variant]="variant()"
+>
+  @if (variant() === 'segmented') {
+    @for (done of segments(); track $index) {
+      <span class="segment" [class.done]="done"></span>
+    }
+  } @else {
+    <span class="fill" [style.inline-size.%]="percent()"></span>
+  }
+</div>

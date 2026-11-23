@@ -1,0 +1,39 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ret-space-2);
+  min-block-size: 1.75rem;
+  padding: var(--ret-space-1) var(--ret-space-3);
+  border-radius: var(--ret-radius-pill);
+  background: var(--ret-color-surface-muted);
+  color: var(--ret-color-text-muted);
+  font-size: var(--ret-font-size-sm);
+  font-weight: var(--ret-font-weight-bold);
+  line-height: var(--ret-line-height-tight);
+}
+
+:host([data-size='sm']) {
+  min-block-size: 1.375rem;
+  padding-inline: var(--ret-space-2);
+  font-size: var(--ret-font-size-xs);
+}
+
+:host([data-tone='success']) {
+  background: var(--ret-color-success-soft);
+  color: var(--ret-color-success);
+}
+
+:host([data-tone='warning']) {
+  background: var(--ret-color-warning-soft);
+  color: var(--ret-color-warning);
+}
+
+:host([data-tone='danger']) {
+  background: var(--ret-color-danger-soft);
+  color: var(--ret-color-danger);
+}
+
+:host([data-tone='info']) {
+  background: var(--ret-color-info-soft);
+  color: var(--ret-color-info);
+}

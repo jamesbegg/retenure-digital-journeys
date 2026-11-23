@@ -16,4 +16,18 @@ export interface JourneyCopy {
   timeoutWarning: string;
   moreTime: string;
   followUpsCleared: string;
+  confirm: string;
+  makeChange: string;
+  confirmed: string;
+  cancel: string;
+  save: string;
+  factNote: string;
+  contactLine: string;
+  urgentLink: string;
+  sendTo: string;
+  doneTitle: string;
+  doneBody: string;
+  alreadyCompletedTitle: string;
+  alreadyCompletedBody: string;
+  notYou: string;
 }

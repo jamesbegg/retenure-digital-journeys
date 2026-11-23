@@ -259,6 +259,12 @@ describe('parseJourneyResponse', () => {
     }
   });
 
+  it('rejects a journey whose copy lacks a check-in key', () => {
+    const body = clone(hartwellOpenJourney);
+    delete body.journey.copy.doneTitle;
+    expect(() => parseJourneyResponse(body)).toThrow(/doneTitle/);
+  });
+
   it('rejects duplicate question, section, member or option ids', () => {
     const question = clone(hartwellOpenJourney);
     spending(question).id = 'q-email';
