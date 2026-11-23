@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { DOCUMENT, DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import { DOCUMENT, DestroyRef, Injectable, computed, effect, inject, signal } from '@angular/core';
 import { SectionAnswers } from '@retenure/ui';
 import { firstValueFrom } from 'rxjs';
 import { parseApiError } from '../api/api-error';
@@ -40,6 +40,8 @@ export class JourneyService {
   readonly stage = signal<JourneyStage>('link-problem');
   readonly errorReason = signal<ClientErrorReason | null>(null);
   readonly verificationFailed = signal(false);
+  // The verification request never got an answer: nothing is lost, and trying again is safe.
+  readonly verifyUnreachable = signal(false);
   readonly busy = signal(false);
   readonly journeyId = signal<string | null>(null);
   readonly journey = signal<OpenJourney | null>(null);
@@ -67,6 +69,9 @@ export class JourneyService {
   constructor() {
     this.takeToken();
     this.stage.set(this.token ? 'verify' : 'link-problem');
+    effect(() => {
+      if (this.tenant.failed()) this.fail('unknown_host');
+    });
     const stop = new AbortController();
     inject(DestroyRef).onDestroy(() => {
       stop.abort();
@@ -101,6 +106,7 @@ export class JourneyService {
     if (!this.token) return this.stage.set('link-problem');
     this.busy.set(true);
     this.verificationFailed.set(false);
+    this.verifyUnreachable.set(false);
     try {
       const result = parseVerificationResponse(
         await this.post('/client/verification', { token: this.token, dateOfBirth }),
@@ -125,7 +131,7 @@ export class JourneyService {
     try {
       const result = parseJourneyResponse(await firstValueFrom(this.http.get('/client/journey')));
       if (result.status !== 'open') return this.finish(result);
-      if (this.journeyId() !== result.journey.id) this.discard();
+      if (this.journeyId() !== result.journey.id) return this.fail('journey_mismatch');
       this.journey.set(result);
       this.adviser.set(result.adviser);
       this.stage.set('ready');
@@ -135,10 +141,10 @@ export class JourneyService {
     }
   }
 
+  // Refused while a send may have landed: an edit would change the payload under its submissionId.
   setAnswers(sectionId: string, answers: SectionAnswers): void {
+    if (this.submitProblem() === 'network') return;
     this.answers.update((all) => ({ ...all, [sectionId]: answers }));
-    // A changed payload needs a new id, or the backend would answer submission_mismatch.
-    this.submissionId = null;
     void this.activity();
   }
 
@@ -173,16 +179,12 @@ export class JourneyService {
     }
   }
 
-  // "I need more time" on the idle warning.
-  extend(): Promise<void> {
-    return this.renew();
-  }
-
   private async activity(): Promise<void> {
     if (this.stage() === 'ready' && this.expiresAt - Date.now() < RENEW_UNDER) await this.renew();
   }
 
-  private async renew(): Promise<void> {
+  // Also the idle warning's "I need more time".
+  async renew(): Promise<void> {
     if (this.renewing) return;
     this.renewing = true;
     try {
@@ -191,7 +193,8 @@ export class JourneyService {
           const { expiresAt } = parseSessionResponse(
             await this.post('/client/journey/session', {}),
           );
-          this.track(expiresAt);
+          // A late answer must not re-arm the timers after a lapse or a failure.
+          if (this.stage() === 'ready') this.track(expiresAt);
           return;
         } catch (error) {
           // Retry once. An unexplained 401 or 403, or a passed deadline, is an expired session.
@@ -247,8 +250,9 @@ export class JourneyService {
   }
 
   private verifyFailed(error: unknown): void {
-    const { reason } = describe(error);
-    if (reason === 'verification_failed') this.verificationFailed.set(true);
+    const { reason, status } = describe(error);
+    if (!reason && (status === 0 || status >= 500)) this.verifyUnreachable.set(true);
+    else if (reason === 'verification_failed') this.verificationFailed.set(true);
     else if (reason === 'verification_locked') this.stage.set('locked');
     else if (reason === 'link_reissued') this.stage.set('link-reissued');
     else if (reason === 'link_requested') this.stage.set('link-requested');
@@ -264,11 +268,18 @@ export class JourneyService {
         ),
       );
       this.submitProblem.set('invalid');
+      this.submissionId = null;
     } else if (reason === 'already_submitted' || reason === 'journey_expired') {
       await this.load();
     } else if (!reason && (status === 0 || status >= 500)) {
       this.submitProblem.set('network');
     } else {
+      if (reason === 'submission_mismatch') {
+        console.error('submission_mismatch', {
+          submissionId: this.submissionId,
+          journeyId: this.journeyId(),
+        });
+      }
       this.protectedFailed(error);
     }
   }
@@ -288,7 +299,12 @@ export class JourneyService {
   private fail(reason?: ClientErrorReason): void {
     this.tenant.reset();
     this.discard();
-    this.clearTimers();
+    this.token = null;
+    this.journeyId.set(null);
+    this.adviser.set(null);
+    this.submittedAt.set(null);
+    this.doneName.set(null);
+    this.idleWarning.set(false);
     this.errorReason.set(reason ?? null);
     this.stage.set('error');
   }

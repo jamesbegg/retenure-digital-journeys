@@ -80,6 +80,21 @@ describe('dev mock', () => {
     },
   );
 
+  it.each(['alreadyCompleted', 'expired'])(
+    'shows Northgate its own adviser for %s, never Hartwell',
+    async (scenario) => {
+      const body = await firstValueFrom(
+        mock(`?mock=${scenario}&firm=northgate`).post('/client/verification', {
+          dateOfBirth: '1983-04-17',
+        }),
+      );
+      const result = parseVerificationResponse(body);
+      expect(result.status).not.toBe('open');
+      expect(JSON.stringify(result)).toContain('northgate.example');
+      expect(JSON.stringify(result)).not.toContain('hartwell');
+    },
+  );
+
   it('expires the session once in sessionExpired', async () => {
     const http = mock('?mock=sessionExpired');
     await firstValueFrom(http.post('/client/verification', { dateOfBirth: '1983-04-17' }));

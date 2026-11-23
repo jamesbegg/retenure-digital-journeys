@@ -221,6 +221,8 @@ export const hartwellOpenJourney = {
   expiresAt: '2026-11-20T15:30:00.000Z',
 } satisfies JourneyResponse;
 
+const northgateAdviser = { name: 'Northgate Planning', email: 'hello@northgate.example' };
+
 export const northgateOpenJourney = {
   schemaVersion: 1,
   status: 'open',
@@ -238,7 +240,7 @@ export const northgateOpenJourney = {
     lead: { id: 'per-lead', firstName: 'Alex', role: 'lead' },
     members: [{ id: 'per-lead', firstName: 'Alex', role: 'lead' }],
   },
-  adviser: { name: 'Northgate Planning', email: 'hello@northgate.example' },
+  adviser: northgateAdviser,
   sections: [
     {
       id: 'sec-pulse',
@@ -274,6 +276,22 @@ export const hartwellExpiredJourney = {
   status: 'expired',
   journeyId: 'jrn-hartwell-0001',
   adviser: hartwellAdviser,
+} satisfies JourneyResponse;
+
+export const northgateSubmittedJourney = {
+  schemaVersion: 1,
+  status: 'submitted',
+  journeyId: 'jrn-northgate-0001',
+  adviser: northgateAdviser,
+  submittedAt: '2026-11-19T10:12:00.000Z',
+  submissionId: '0b8e5a52-3c1d-4f6e-8a79-5d2c4b1e9f30',
+} satisfies JourneyResponse;
+
+export const northgateExpiredJourney = {
+  schemaVersion: 1,
+  status: 'expired',
+  journeyId: 'jrn-northgate-0001',
+  adviser: northgateAdviser,
 } satisfies JourneyResponse;
 
 export const hartwellVerificationOpen = {

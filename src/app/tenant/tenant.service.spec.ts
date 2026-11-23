@@ -97,13 +97,32 @@ describe('tenantInterceptor', () => {
     TestBed.inject(JourneyService).journeyId.set('jrn-hartwell-0001');
   }
 
-  it('leaves X-Tenant-Id and X-Journey-Id off the tenant lookup, but sends cookies', async () => {
-    setup();
+  it('leaves X-Tenant-Id and X-Journey-Id off the tenant lookup even once signed in, but sends cookies', async () => {
+    await signedIn();
     TestBed.inject(HttpClient).get('/client/tenant').subscribe();
     const request = http.expectOne('/client/tenant').request;
     expect(request.headers.has('X-Tenant-Id')).toBe(false);
     expect(request.headers.has('X-Journey-Id')).toBe(false);
     expect(request.withCredentials).toBe(true);
+  });
+
+  it('refuses a protected request locally when there is no tenant', async () => {
+    setup();
+    const failure = vi.fn();
+    TestBed.inject(HttpClient).post('/client/journey/session', {}).subscribe({ error: failure });
+    http.expectNone('/client/journey/session');
+    expect(failure).toHaveBeenCalled();
+  });
+
+  it('stops the journey when the tenant lookup fails', async () => {
+    const tenant = setup();
+    const journey = TestBed.inject(JourneyService);
+    const loaded = tenant.load();
+    http.expectOne('/client/tenant').flush('', { status: 404, statusText: 'Not Found' });
+    await loaded;
+    TestBed.tick();
+    expect(journey.stage()).toBe('error');
+    expect(journey.errorReason()).toBe('unknown_host');
   });
 
   it('adds both headers and credentials to protected requests', async () => {

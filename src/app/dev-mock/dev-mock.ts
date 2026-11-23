@@ -11,7 +11,9 @@ import {
   hartwellOpenJourney,
   hartwellSubmittedJourney,
   hartwellTenant,
+  northgateExpiredJourney,
   northgateOpenJourney,
+  northgateSubmittedJourney,
   northgateTenant,
 } from '../api/fixtures';
 import { ClientErrorReason } from '../interfaces/api-error';
@@ -57,14 +59,16 @@ export function createDevMock(search: string, hostname: string): HttpInterceptor
     ? 'northgate'
     : 'hartwell';
   const tenant = firm === 'northgate' ? northgateTenant : hartwellTenant;
-  const open = firm === 'northgate' ? northgateOpenJourney : hartwellOpenJourney;
+  const northgate = firm === 'northgate';
+  const open = northgate ? northgateOpenJourney : hartwellOpenJourney;
+  const expired = northgate ? northgateExpiredJourney : hartwellExpiredJourney;
+  const submittedBase = northgate ? northgateSubmittedJourney : hartwellSubmittedJourney;
   const expiresAt = () => new Date(Date.now() + 30 * 60_000).toISOString();
   let sessionExpiredOnce = scenario === 'sessionExpired';
   let lostSubmit = scenario === 'lostSubmit';
   let submissionId: string | null = null;
   const submitted = () => ({
-    ...hartwellSubmittedJourney,
-    journeyId: open.journey.id,
+    ...submittedBase,
     ...(submissionId && { submissionId }),
   });
 
@@ -84,7 +88,7 @@ export function createDevMock(search: string, hostname: string): HttpInterceptor
       }
       if (scenario === 'alreadyCompleted' || submissionId) return reply(submitted());
       if (scenario === 'expired') {
-        return reply({ ...hartwellExpiredJourney, journeyId: open.journey.id });
+        return reply(expired);
       }
       return reply({
         schemaVersion: 1,

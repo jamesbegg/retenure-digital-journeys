@@ -7,6 +7,7 @@ import {
   hartwellOpenJourney,
   hartwellSubmittedJourney,
 } from '../api/fixtures';
+import { ClientErrorReason } from '../interfaces/api-error';
 import { TenantService } from '../tenant/tenant.service';
 import { JourneyService } from './journey.service';
 
@@ -67,6 +68,7 @@ describe('JourneyService', () => {
 
   afterEach(() => {
     http.verify();
+    vi.restoreAllMocks();
     vi.useRealTimers();
     TestBed.resetTestingModule();
   });
@@ -178,14 +180,81 @@ describe('JourneyService', () => {
       expect(reset).toHaveBeenCalled();
     });
 
-    it('lets a recognised reason win over the status', async () => {
+    it.each([
+      ['unknown_host', 404],
+      ['forbidden_origin', 403],
+      ['unsupported_plan', 409],
+      ['journey_mismatch', 409],
+    ] as [ClientErrorReason, number][])(
+      'lets %s win over the status and show the error page',
+      async (reason, status) => {
+        const service = start();
+        const done = service.verify('1983-04-17');
+        await answer('/client/verification', verified());
+        await answer('/client/journey', apiError(status, reason), status);
+        await done;
+        expect(service.stage()).toBe('error');
+        expect(service.errorReason()).toBe(reason);
+      },
+    );
+
+    it('goes to verification on an explicit session_expired', async () => {
       const service = start();
       const done = service.verify('1983-04-17');
       await answer('/client/verification', verified());
-      await answer('/client/journey', apiError(403, 'unsupported_plan'), 403);
+      await answer('/client/journey', apiError(401, 'session_expired'), 401);
+      await done;
+      expect(service.stage()).toBe('verify');
+    });
+
+    it('refuses a journey that is not the one verified, and renders none of it', async () => {
+      const service = start();
+      const done = service.verify('1983-04-17');
+      await answer('/client/verification', verified());
+      await answer('/client/journey', {
+        ...openJourney(),
+        journey: { ...hartwellOpenJourney.journey, id: 'jrn-other-0002' },
+      });
       await done;
       expect(service.stage()).toBe('error');
-      expect(service.errorReason()).toBe('unsupported_plan');
+      expect(service.errorReason()).toBe('journey_mismatch');
+      expect(service.journey()).toBeNull();
+    });
+
+    it('keeps the answers when verification cannot be reached', async () => {
+      const service = start();
+      await signIn(service);
+      service.setAnswers('sec-changes', { 'q-moved': yes });
+      await vi.advanceTimersByTimeAsync(30 * MINUTE);
+      let done = service.verify('1983-04-17');
+      await answer('/client/verification', 'Bad gateway', 502);
+      await done;
+      expect(service.stage()).toBe('verify');
+      expect(service.verifyUnreachable()).toBe(true);
+      expect(service.answers()['sec-changes']).toEqual({ 'q-moved': yes });
+      done = service.verify('1983-04-17');
+      expect(service.verifyUnreachable()).toBe(false);
+      await answer('/client/verification', verified());
+      await answer('/client/journey', openJourney());
+      await done;
+      expect(service.answers()['sec-changes']).toEqual({ 'q-moved': yes });
+    });
+
+    it('clears every trace of the journey on failure', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const service = start();
+      await signIn(service);
+      service.setAnswers('sec-changes', { 'q-moved': yes });
+      const sent = service.submit();
+      await answer('/client/journey/submission', apiError(409, 'submission_mismatch'), 409);
+      await sent;
+      expect(service.stage()).toBe('error');
+      expect(service.journeyId()).toBeNull();
+      expect(service.adviser()).toBeNull();
+      expect(service.answers()).toEqual({});
+      await service.verify('1983-04-17');
+      expect(service.stage()).toBe('link-problem');
+      http.expectNone(() => true);
     });
 
     it.each([401, 403])(
@@ -220,6 +289,75 @@ describe('JourneyService', () => {
       http.expectNone('/client/journey/session');
     });
 
+    it('renews at 24:59 left but not at 25:01', async () => {
+      const service = start();
+      await signIn(service, 30);
+      await vi.advanceTimersByTimeAsync(4 * MINUTE + 59_000);
+      document.dispatchEvent(new KeyboardEvent('keydown'));
+      http.expectNone('/client/journey/session');
+      await vi.advanceTimersByTimeAsync(2_000);
+      document.dispatchEvent(new KeyboardEvent('keydown'));
+      await answer('/client/journey/session', { schemaVersion: 1, expiresAt: inMinutes(30) });
+      expect(service.stage()).toBe('ready');
+    });
+
+    it('ignores a late renewal after the session lapsed', async () => {
+      const service = start();
+      await signIn(service, 30);
+      await vi.advanceTimersByTimeAsync(10 * MINUTE);
+      document.dispatchEvent(new KeyboardEvent('keydown'));
+      const late = http.expectOne('/client/journey/session');
+      await vi.advanceTimersByTimeAsync(20 * MINUTE);
+      expect(service.stage()).toBe('verify');
+      late.flush({ schemaVersion: 1, expiresAt: inMinutes(30) });
+      await settle();
+      await vi.advanceTimersByTimeAsync(29 * MINUTE);
+      expect(service.idleWarning()).toBe(false);
+      expect(service.stage()).toBe('verify');
+    });
+
+    it('ends in error with the tenant reset when a renewal says journey_mismatch', async () => {
+      const service = start();
+      const reset = vi.spyOn(TestBed.inject(TenantService), 'reset');
+      await signIn(service, 30);
+      await vi.advanceTimersByTimeAsync(10 * MINUTE);
+      document.dispatchEvent(new KeyboardEvent('keydown'));
+      await answer('/client/journey/session', apiError(409, 'journey_mismatch'), 409);
+      expect(service.stage()).toBe('error');
+      expect(reset).toHaveBeenCalled();
+    });
+
+    it('does not lapse a hidden tab past the deadline', async () => {
+      const service = start();
+      await signIn(service, 30);
+      vi.setSystemTime(new Date(NOW.getTime() + 45 * MINUTE));
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(service.stage()).toBe('ready');
+    });
+
+    it('stops every timer on expired and on error', async () => {
+      const expired = start();
+      let done = expired.verify('1983-04-17');
+      await answer('/client/verification', verified());
+      await answer('/client/journey', hartwellExpiredJourney);
+      await done;
+      await vi.advanceTimersByTimeAsync(31 * MINUTE);
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(expired.stage()).toBe('expired');
+      expect(expired.idleWarning()).toBe(false);
+      TestBed.resetTestingModule();
+
+      const failed = start();
+      done = failed.verify('1983-04-17');
+      await answer('/client/verification', verified());
+      await answer('/client/journey', apiError(409, 'journey_mismatch'), 409);
+      await done;
+      await vi.advanceTimersByTimeAsync(31 * MINUTE);
+      expect(failed.stage()).toBe('error');
+      expect(failed.idleWarning()).toBe(false);
+    });
+
     it('renews once on activity when under 25 minutes remain, from the server deadline', async () => {
       const service = start();
       await signIn(service, 30);
@@ -242,7 +380,7 @@ describe('JourneyService', () => {
       expect(service.idleWarning()).toBe(false);
       await vi.advanceTimersByTimeAsync(1_000);
       expect(service.idleWarning()).toBe(true);
-      const extending = service.extend();
+      const extending = service.renew();
       await answer('/client/journey/session', { schemaVersion: 1, expiresAt: inMinutes(60) });
       await extending;
       expect(service.idleWarning()).toBe(false);
@@ -368,6 +506,21 @@ describe('JourneyService', () => {
       expect(service.answers()).toEqual({});
     });
 
+    it('stops every timer and ignores a late wake once done', async () => {
+      const service = await ready();
+      const sent = service.submit();
+      await answer('/client/journey/submission', {
+        schemaVersion: 1,
+        submissionId: 'x',
+        submittedAt: NOW.toISOString(),
+      });
+      await sent;
+      await vi.advanceTimersByTimeAsync(31 * MINUTE);
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(service.stage()).toBe('done');
+      expect(service.idleWarning()).toBe(false);
+    });
+
     it('does nothing on a second press while sending', async () => {
       const service = await ready();
       const first = service.submit();
@@ -395,13 +548,41 @@ describe('JourneyService', () => {
       expect(service.submitProblem()).toBe('network');
     });
 
-    it('uses a new submissionId once an answer has changed', async () => {
+    it('refuses edits while the outcome is unknown, and a landed send ends on done', async () => {
       const service = await ready();
       let sent = service.submit();
       const first = http.expectOne('/client/journey/submission');
       first.error(new ProgressEvent('error'));
       await sent;
       service.setAnswers('sec-changes', { 'q-moved': { kind: 'yesNo', value: false } });
+      expect(service.answers()['sec-changes']).toEqual({ 'q-moved': yes });
+      sent = service.submit();
+      const retry = await answer(
+        '/client/journey/submission',
+        apiError(409, 'already_submitted'),
+        409,
+      );
+      const submissionId = (first.request.body as { submissionId: string }).submissionId;
+      expect((retry.body as { submissionId: string }).submissionId).toBe(submissionId);
+      await answer('/client/journey', { ...hartwellSubmittedJourney, submissionId });
+      await sent;
+      expect(service.stage()).toBe('done');
+    });
+
+    it('uses a new submissionId after a different journey replaced the answers', async () => {
+      const service = await ready();
+      let sent = service.submit();
+      const first = http.expectOne('/client/journey/submission');
+      first.flush('Forbidden', { status: 403, statusText: 'Forbidden' });
+      await sent;
+      const done = service.verify('1983-04-17');
+      await answer('/client/verification', verified(30, 'jrn-other-0002'));
+      await answer('/client/journey', {
+        ...openJourney(),
+        journey: { ...hartwellOpenJourney.journey, id: 'jrn-other-0002' },
+      });
+      await done;
+      service.setAnswers('sec-changes', { 'q-moved': yes });
       sent = service.submit();
       const second = http.expectOne('/client/journey/submission');
       expect((second.request.body as { submissionId: string }).submissionId).not.toBe(
@@ -409,6 +590,14 @@ describe('JourneyService', () => {
       );
       second.error(new ProgressEvent('error'));
       await sent;
+    });
+
+    it('treats a plain 500 as retryable, like a 502', async () => {
+      const service = await ready();
+      const sent = service.submit();
+      await answer('/client/journey/submission', 'Server error', 500);
+      await sent;
+      expect(service.submitProblem()).toBe('network');
     });
 
     it('recovers a lost response: expired session, reverify, receipt with our id, done', async () => {
@@ -493,19 +682,45 @@ describe('JourneyService', () => {
       expect(service.errorReason()).toBe('submission_mismatch');
     });
 
-    it('logs no answer values', async () => {
-      const spies = (['log', 'info', 'warn', 'error'] as const).map((m) =>
-        vi.spyOn(console, m).mockImplementation(() => undefined),
-      );
+    it.each([
+      ['a network failure', 502, 'Bad gateway'],
+      [
+        'invalid_submission',
+        400,
+        apiError(400, 'invalid_submission', {
+          fieldErrors: [{ field: 'answers.q-savings', code: 'x', message: 'Check it' }],
+        }),
+      ],
+      ['submission_mismatch', 409, apiError(409, 'submission_mismatch')],
+    ] as [string, number, object | string][])(
+      'logs no answer values on %s',
+      async (_name, status, body) => {
+        const spies = (['log', 'info', 'warn', 'error'] as const).map((m) =>
+          vi.spyOn(console, m).mockImplementation(() => undefined),
+        );
+        const service = await ready();
+        service.setAnswers('sec-changes', { 'q-savings': { kind: 'money', value: '98765.43' } });
+        const sent = service.submit();
+        await answer('/client/journey/submission', body, status);
+        await sent;
+        expect(JSON.stringify(spies.map((s) => s.mock.calls))).not.toContain('98765');
+      },
+    );
+
+    it('logs only the ids on submission_mismatch', async () => {
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       const service = await ready();
-      service.setAnswers('sec-changes', {
-        'q-savings': { kind: 'money', value: '98765.43' },
-      });
       const sent = service.submit();
-      await answer('/client/journey/submission', 'Bad gateway', 502);
+      const request = await answer(
+        '/client/journey/submission',
+        apiError(409, 'submission_mismatch'),
+        409,
+      );
       await sent;
-      expect(JSON.stringify(spies.map((s) => s.mock.calls))).not.toContain('98765');
-      spies.forEach((s) => s.mockRestore());
+      expect(error).toHaveBeenCalledWith('submission_mismatch', {
+        submissionId: (request.body as { submissionId: string }).submissionId,
+        journeyId: ID,
+      });
     });
   });
 
