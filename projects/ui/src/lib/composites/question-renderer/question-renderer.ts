@@ -14,18 +14,16 @@ import {
 import { ReactiveFormsModule } from '@angular/forms';
 import { SectionAnswers } from '../../interfaces/answer';
 import { JourneyCopy } from '../../interfaces/journey-copy';
-import { Section } from '../../interfaces/question';
-import { QuestionItem, RendererSource, ShownQuestions } from '../../interfaces/question-renderer';
+import {
+  QuestionItem,
+  RenderableSection,
+  RendererSource,
+  ShownQuestions,
+} from '../../interfaces/question-renderer';
 import { RadioGroup } from '../../primitives/radio-group/radio-group';
 import { TextField } from '../../primitives/text-field/text-field';
 import { YesNo } from '../../primitives/yes-no/yes-no';
-import {
-  buildItem,
-  isAnswered,
-  isRendered,
-  questionError,
-  toAnswer,
-} from '../../utils/question-controls';
+import { buildItems, isAnswered, questionError, toAnswer } from '../../utils/question-controls';
 import { Card } from '../card/card';
 import { FactCard } from '../fact-card/fact-card';
 
@@ -42,7 +40,7 @@ const openCount = (items: QuestionItem[]) => {
   styleUrl: './question-renderer.scss',
 })
 export class QuestionRenderer {
-  readonly section = input.required<Section>();
+  readonly section = input.required<RenderableSection>();
   readonly copy = input.required<JourneyCopy>();
   readonly answers = model<SectionAnswers>({});
   readonly complete = output<boolean>();
@@ -58,11 +56,7 @@ export class QuestionRenderer {
         return previous.value;
       }
       this.emitted = json;
-      return section.blocks.flatMap<QuestionItem>((block) =>
-        block.type === 'card' && isRendered(block.question)
-          ? [buildItem(block.question, answers[block.question.id])]
-          : [],
-      );
+      return buildItems(section, answers);
     },
   });
   // Bumped on every change, because a FormControl's state is not a signal.

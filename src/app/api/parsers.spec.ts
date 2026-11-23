@@ -313,6 +313,19 @@ describe('parseJourneyResponse', () => {
     'moneyUnreadable',
   ];
 
+  it('keeps a respondent who is a household member, even when not the lead', () => {
+    const body = clone(hartwellOpenJourney);
+    body.client.respondentId = 'per-tom';
+    const parsed = parseJourneyResponse(body);
+    expect(parsed.status === 'open' && parsed.client.respondentId).toBe('per-tom');
+  });
+
+  it('rejects a respondent who is not a household member', () => {
+    const body = clone(hartwellOpenJourney);
+    body.client.respondentId = 'per-someone-else';
+    expect(() => parseJourneyResponse(body)).toThrow(/respondentId/);
+  });
+
   it('needs none of the retired already-completed keys, and ignores them if sent', () => {
     const body = clone(hartwellOpenJourney);
     for (const key of ['alreadyCompletedTitle', 'alreadyCompletedBody', 'notYou']) {

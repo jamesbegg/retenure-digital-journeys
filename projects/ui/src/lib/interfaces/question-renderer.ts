@@ -4,20 +4,29 @@ import { Question, Section } from './question';
 import { RadioGroupValue } from './radio-group';
 import { YesNoValue } from './yes-no';
 
-export type RenderedQuestion = Extract<
+export type RenderableQuestion = Extract<
   Question,
   { kind: 'yesNo' | 'radio' | 'text' | 'money' | 'date' | 'confirmFacts' }
 >;
 
+export interface RenderableBlock {
+  type: 'card';
+  question: RenderableQuestion;
+}
+
+export interface RenderableSection extends Omit<Section, 'blocks'> {
+  blocks: RenderableBlock[];
+}
+
 export type QuestionControlValue = YesNoValue | RadioGroupValue | FactCardValue | string | null;
 
 export interface QuestionItem {
-  question: RenderedQuestion;
+  question: RenderableQuestion;
   control: FormControl<QuestionControlValue>;
 }
 
 export interface RendererSource {
-  section: Section;
+  section: RenderableSection;
   answers: SectionAnswers;
 }
 

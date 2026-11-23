@@ -3,7 +3,12 @@ import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { SectionAnswers } from '../../interfaces/answer';
 import { JourneyCopy } from '../../interfaces/journey-copy';
-import { Block, Question, Section } from '../../interfaces/question';
+import { Question } from '../../interfaces/question';
+import {
+  RenderableBlock,
+  RenderableQuestion,
+  RenderableSection,
+} from '../../interfaces/question-renderer';
 import { QuestionRenderer } from './question-renderer';
 
 const copy: JourneyCopy = {
@@ -43,16 +48,16 @@ const copy: JourneyCopy = {
 };
 
 const base = { version: 1, required: true } as const;
-const card = (question: Question): Block => ({ type: 'card', question });
+const card = (question: RenderableQuestion): RenderableBlock => ({ type: 'card', question });
 
-const working: Question = {
+const working: RenderableQuestion = {
   ...base,
   id: 'working',
   prompt: 'Are you still working?',
   kind: 'yesNo',
   detail: { when: false, label: 'What are you doing now?', required: true },
 };
-const pay: Question = {
+const pay: RenderableQuestion = {
   ...base,
   id: 'pay',
   prompt: 'What is your yearly pay?',
@@ -65,7 +70,7 @@ const pay: Question = {
     },
   ],
 };
-const helper: Question = {
+const helper: RenderableQuestion = {
   ...base,
   id: 'helper',
   prompt: 'Who helps most?',
@@ -80,7 +85,7 @@ const helper: Question = {
     },
   ],
 };
-const email: Question = {
+const email: RenderableQuestion = {
   ...base,
   id: 'email',
   prompt: 'What is your email?',
@@ -88,20 +93,20 @@ const email: Question = {
   multiline: false,
   validators: [{ rule: 'emailAddress', message: 'Enter an email like name@example.com' }],
 };
-const purchase: Question = {
+const purchase: RenderableQuestion = {
   ...base,
   id: 'purchase',
   prompt: 'When is the purchase?',
   kind: 'date',
 };
-const goal: Question = {
+const goal: RenderableQuestion = {
   ...base,
   id: 'goal',
   prompt: 'Is this still your goal?',
   kind: 'confirmFacts',
   facts: [{ id: 'f1', label: 'Retire at 60', value: 'target £500,000 by 2040' }],
 };
-const extra: Question = {
+const extra: RenderableQuestion = {
   ...base,
   id: 'extra',
   prompt: 'Anything else?',
@@ -110,7 +115,7 @@ const extra: Question = {
   required: false,
 };
 
-const section = (...questions: Question[]): Section => ({
+const section = (...questions: RenderableQuestion[]): RenderableSection => ({
   id: 's1',
   title: 'Section',
   blocks: questions.map(card),
@@ -128,7 +133,7 @@ const section = (...questions: Question[]): Section => ({
 })
 class Host {
   readonly renderer = viewChild.required(QuestionRenderer);
-  readonly section = signal<Section>(section(working));
+  readonly section = signal<RenderableSection>(section(working));
   readonly copy = copy;
   readonly answers = signal<SectionAnswers>({});
   readonly completes: boolean[] = [];
@@ -146,7 +151,7 @@ beforeEach(() => {
   })) as typeof window.matchMedia;
 });
 
-async function renderSection(s: Section, answers: SectionAnswers = {}) {
+async function renderSection(s: RenderableSection, answers: SectionAnswers = {}) {
   const view = await render(Host);
   const host = view.fixture.componentInstance;
   host.section.set(s);
@@ -386,7 +391,7 @@ describe('QuestionRenderer', () => {
     });
 
     it('uses the moneyUnreadable copy inside a money option input', async () => {
-      const money: Question = {
+      const money: RenderableQuestion = {
         ...helper,
         options: [
           helper.kind === 'radio' ? helper.options[0] : { value: 'a', label: 'Priya' },
@@ -408,7 +413,7 @@ describe('QuestionRenderer', () => {
     });
 
     it('shows an option input validator message inside that option own field', async () => {
-      const checked: Question = {
+      const checked: RenderableQuestion = {
         ...helper,
         options: [
           { value: 'a', label: 'Priya' },
@@ -592,20 +597,18 @@ describe('QuestionRenderer', () => {
       expect(host.answers()).toEqual({});
       expect(last(host)).toBe(true);
     });
+  });
 
-    it('skips kinds it cannot render', async () => {
-      const checkbox: Question = {
-        ...base,
-        id: 'cb',
-        prompt: 'Pick some',
-        kind: 'checkbox',
-        options: [],
-      };
-      const { host, settle } = await renderSection(section(checkbox, extra));
-      await settle();
-      expect(screen.queryByText('Pick some')).toBeNull();
-      expect(last(host)).toBe(true);
-    });
+  it('throws naming the question when a kind it cannot render reaches it', async () => {
+    const checkbox: Question = {
+      ...base,
+      id: 'q-cb',
+      prompt: 'Pick some',
+      kind: 'checkbox',
+      options: [],
+    };
+    const unsupported = { id: 's', title: 'S', blocks: [card(extra), card(checkbox as never)] };
+    await expect(renderSection(unsupported)).rejects.toThrow(/q-cb/);
   });
 
   describe('completion and seeding', () => {
@@ -720,7 +723,7 @@ describe('QuestionRenderer', () => {
   });
 
   describe('completion rules', () => {
-    const optional = (q: Question): Question => ({ ...q, required: false });
+    const optional = (q: RenderableQuestion): RenderableQuestion => ({ ...q, required: false });
 
     it('renders multiline text as a textarea', async () => {
       await renderSection(section(extra));
@@ -738,7 +741,7 @@ describe('QuestionRenderer', () => {
     });
 
     it('is complete for No with an optional detail left blank', async () => {
-      const q: Question = {
+      const q: RenderableQuestion = {
         ...working,
         detail: { when: false, label: 'What are you doing now?', required: false },
       };
@@ -767,7 +770,7 @@ describe('QuestionRenderer', () => {
     });
 
     it('is complete for an optional radio option input left blank', async () => {
-      const q: Question = {
+      const q: RenderableQuestion = {
         ...helper,
         options: [
           { value: 'a', label: 'Priya' },

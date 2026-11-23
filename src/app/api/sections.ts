@@ -1,10 +1,10 @@
 import {
   ageLimits,
-  Block,
+  RenderableBlock,
+  RenderableQuestion,
+  RenderableSection,
   HeldFact,
-  Question,
   QuestionOption,
-  Section,
   ValidatorRef,
   YesNoDetail,
 } from '@retenure/ui';
@@ -111,7 +111,7 @@ function heldFact(reader: Reader, memberIds: ReadonlySet<string>): HeldFact {
   };
 }
 
-function question(reader: Reader, memberIds: ReadonlySet<string>): Question {
+function question(reader: Reader, memberIds: ReadonlySet<string>): RenderableQuestion {
   if (reader.has('followUps')) reader.fail('followUps', 'not supported in v1');
   const personId = reader.optionalString('personId');
   if (personId !== undefined && !memberIds.has(personId)) {
@@ -178,12 +178,12 @@ function question(reader: Reader, memberIds: ReadonlySet<string>): Question {
   }
 }
 
-function block(reader: Reader, memberIds: ReadonlySet<string>): Block {
+function block(reader: Reader, memberIds: ReadonlySet<string>): RenderableBlock {
   reader.oneOf('type', ['card']);
   return { type: 'card', question: question(reader.object('question'), memberIds) };
 }
 
-export function parseSections(reader: Reader, memberIds: ReadonlySet<string>): Section[] {
+export function parseSections(reader: Reader, memberIds: ReadonlySet<string>): RenderableSection[] {
   const sections = reader.objects(
     'sections',
     (section) => ({
@@ -199,7 +199,7 @@ export function parseSections(reader: Reader, memberIds: ReadonlySet<string>): S
     `${reader.path}.sections`,
   );
   unique(
-    sections.flatMap((s) => s.blocks.map((b) => (b.type === 'card' ? b.question.id : ''))),
+    sections.flatMap((s) => s.blocks.map((b) => b.question.id)),
     `${reader.path}.questions`,
   );
   return sections;

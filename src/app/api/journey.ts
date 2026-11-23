@@ -121,11 +121,15 @@ export function parseJourneyResponse(json: unknown): JourneyResponse {
   ) {
     client.fail('lead', 'must match the one member with the lead role');
   }
+  const respondentId = client.optionalString('respondentId');
+  if (respondentId !== undefined && !memberIds.includes(respondentId)) {
+    client.fail('respondentId', 'not a household member');
+  }
   return {
     schemaVersion: body.schemaVersion(),
     status,
     journey: meta(body.object('journey')),
-    client: { lead, members },
+    client: { lead, members, ...(respondentId !== undefined && { respondentId }) },
     adviser: adviser(body.object('adviser')),
     sections: parseSections(body, new Set(memberIds)),
     expiresAt: body.timestamp('expiresAt'),

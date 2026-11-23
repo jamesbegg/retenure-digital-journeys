@@ -1,5 +1,5 @@
 import { FormControl, ValidationErrors, ValidatorFn } from '@angular/forms';
-import { AnswerValue, FactCardValue } from '../interfaces/answer';
+import { AnswerValue, FactCardValue, SectionAnswers } from '../interfaces/answer';
 import { JourneyCopy } from '../interfaces/journey-copy';
 import { Question } from '../interfaces/question';
 import {
@@ -7,7 +7,8 @@ import {
   QuestionControlValue,
   QuestionError,
   QuestionItem,
-  RenderedQuestion,
+  RenderableQuestion,
+  RenderableSection,
 } from '../interfaces/question-renderer';
 import { RadioGroupValue } from '../interfaces/radio-group';
 import { TextFieldType } from '../interfaces/text-field';
@@ -17,8 +18,12 @@ import { dateOfBirth, emailAddress, moneyAmount, personName, ukPhone } from './v
 
 const RENDERED = ['yesNo', 'radio', 'text', 'money', 'date', 'confirmFacts'];
 
-export const isRendered = (question: Question): question is RenderedQuestion =>
-  RENDERED.includes(question.kind);
+// The types keep other kinds out; this stops one that slips through from vanishing silently.
+function assertRenderable(question: Question): asserts question is RenderableQuestion {
+  if (!RENDERED.includes(question.kind)) {
+    throw new Error(`Question ${question.id} has the kind ${question.kind}, which cannot be shown`);
+  }
+}
 
 const blank = (value: QuestionControlValue): boolean =>
   value === null || (typeof value === 'string' && !value.trim());
@@ -53,7 +58,7 @@ function fieldValidators(type: TextFieldType, refs: ValidatorRef[] = []): Valida
     : fns;
 }
 
-function validatorFor(q: RenderedQuestion): ValidatorFn {
+function validatorFor(q: RenderableQuestion): ValidatorFn {
   const required: ValidatorFn = (control) =>
     q.required && blank(control.value) ? { required: true } : null;
   switch (q.kind) {
@@ -87,10 +92,10 @@ function validatorFor(q: RenderedQuestion): ValidatorFn {
   }
 }
 
-const emptyValue = (q: RenderedQuestion): QuestionControlValue =>
+const emptyValue = (q: RenderableQuestion): QuestionControlValue =>
   q.kind === 'text' || q.kind === 'money' || q.kind === 'date' ? '' : null;
 
-function controlValue(q: RenderedQuestion, answer?: AnswerValue): QuestionControlValue {
+function controlValue(q: RenderableQuestion, answer?: AnswerValue): QuestionControlValue {
   if (!answer || answer.kind !== q.kind) return emptyValue(q);
   switch (answer.kind) {
     case 'yesNo':
@@ -114,7 +119,14 @@ function controlValue(q: RenderedQuestion, answer?: AnswerValue): QuestionContro
   }
 }
 
-export function buildItem(question: RenderedQuestion, answer?: AnswerValue): QuestionItem {
+export function buildItems(section: RenderableSection, answers: SectionAnswers): QuestionItem[] {
+  return section.blocks.map(({ question }) => {
+    assertRenderable(question);
+    return buildItem(question, answers[question.id]);
+  });
+}
+
+function buildItem(question: RenderableQuestion, answer?: AnswerValue): QuestionItem {
   const value = controlValue(question, answer);
   const control = new FormControl<QuestionControlValue>(value, {
     validators: validatorFor(question),

@@ -1,7 +1,11 @@
 import { Component, signal } from '@angular/core';
 import { SectionAnswers } from '../../interfaces/answer';
 import { JourneyCopy } from '../../interfaces/journey-copy';
-import { Block, Question, Section } from '../../interfaces/question';
+import {
+  RenderableBlock,
+  RenderableQuestion,
+  RenderableSection,
+} from '../../interfaces/question-renderer';
 import { Variants } from '../../interfaces/story';
 import { QuestionRenderer } from './question-renderer';
 
@@ -43,7 +47,7 @@ const copy: JourneyCopy = {
 
 const base = { version: 1, required: true } as const;
 
-const questions: Question[] = [
+const questions: RenderableQuestion[] = [
   {
     ...base,
     id: 'goal',
@@ -95,10 +99,10 @@ export class QuestionRendererStory {
   protected readonly variants: Variants<QuestionRenderer> = {};
 
   protected readonly copy = copy;
-  protected readonly section: Section = {
+  protected readonly section: RenderableSection = {
     id: 'story',
     title: 'One of every kind',
-    blocks: questions.map((question): Block => ({ type: 'card', question })),
+    blocks: questions.map((question): RenderableBlock => ({ type: 'card', question })),
   };
   protected readonly answers = signal<SectionAnswers>({});
   protected readonly complete = signal(false);
