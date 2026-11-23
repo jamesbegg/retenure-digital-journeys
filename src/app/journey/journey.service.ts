@@ -137,7 +137,15 @@ export class JourneyService {
       this.stage.set('ready');
       this.track(result.expiresAt);
     } catch (error) {
-      this.protectedFailed(error);
+      const { reason, status } = describe(error);
+      if (this.journey() && !reason && (status === 0 || status >= 500)) {
+        // Re-verifying with answers held: nothing is lost while the tab stays open.
+        this.clearTimers();
+        this.verifyUnreachable.set(true);
+        this.stage.set('verify');
+      } else {
+        this.protectedFailed(error);
+      }
     }
   }
 

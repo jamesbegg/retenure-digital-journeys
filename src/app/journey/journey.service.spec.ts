@@ -221,6 +221,40 @@ describe('JourneyService', () => {
       expect(service.journey()).toBeNull();
     });
 
+    it.each([0, 500, 503])(
+      'keeps the answers when the reload after re-verify fails with status %i',
+      async (status) => {
+        const service = start();
+        await signIn(service);
+        service.setAnswers('sec-changes', { 'q-moved': yes });
+        await vi.advanceTimersByTimeAsync(30 * MINUTE);
+        let done = service.verify('1983-04-17');
+        await answer('/client/verification', verified());
+        const load = http.expectOne('/client/journey');
+        if (status === 0) load.error(new ProgressEvent('error'));
+        else load.flush('Unavailable', { status, statusText: 'Unavailable' });
+        await done;
+        expect(service.stage()).toBe('verify');
+        expect(service.verifyUnreachable()).toBe(true);
+        expect(service.answers()['sec-changes']).toEqual({ 'q-moved': yes });
+        done = service.verify('1983-04-17');
+        await answer('/client/verification', verified());
+        await answer('/client/journey', openJourney());
+        await done;
+        expect(service.stage()).toBe('ready');
+        expect(service.answers()['sec-changes']).toEqual({ 'q-moved': yes });
+      },
+    );
+
+    it('still resets when the first load fails with a 500', async () => {
+      const service = start();
+      const done = service.verify('1983-04-17');
+      await answer('/client/verification', verified());
+      await answer('/client/journey', 'Unavailable', 500);
+      await done;
+      expect(service.stage()).toBe('error');
+    });
+
     it('keeps the answers when verification cannot be reached', async () => {
       const service = start();
       await signIn(service);
