@@ -424,6 +424,18 @@ describe('JourneyService', () => {
       expect(service.stage()).toBe('ready');
     });
 
+    it('sends one request for two renewals made back to back', async () => {
+      const service = start();
+      await signIn(service, 30);
+      void service.renew();
+      void service.renew();
+      http
+        .expectOne('/client/journey/session')
+        .flush({ schemaVersion: 1, expiresAt: inMinutes(60) });
+      await settle();
+      http.expectNone('/client/journey/session');
+    });
+
     it('warns an idle tab 2 minutes before the deadline, and I need more time renews', async () => {
       const service = start();
       await signIn(service, 30);
