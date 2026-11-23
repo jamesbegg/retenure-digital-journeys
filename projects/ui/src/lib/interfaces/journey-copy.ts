@@ -27,9 +27,6 @@ export interface JourneyCopy {
   sendTo: string;
   doneTitle: string;
   doneBody: string;
-  alreadyCompletedTitle: string;
-  alreadyCompletedBody: string;
-  notYou: string;
   close: string;
   emailAdviser: string;
   adviserLabel: string;

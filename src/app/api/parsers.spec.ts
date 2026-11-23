@@ -306,15 +306,22 @@ describe('parseJourneyResponse', () => {
     'sendTo',
     'doneTitle',
     'doneBody',
-    'alreadyCompletedTitle',
-    'alreadyCompletedBody',
-    'notYou',
     'close',
     'emailAdviser',
     'adviserLabel',
     'progressValue',
     'moneyUnreadable',
   ];
+
+  it('needs none of the retired already-completed keys, and ignores them if sent', () => {
+    const body = clone(hartwellOpenJourney);
+    for (const key of ['alreadyCompletedTitle', 'alreadyCompletedBody', 'notYou']) {
+      delete body.journey.copy[key];
+    }
+    expect(parseJourneyResponse(body)).toEqual(hartwellOpenJourney);
+    body.journey.copy.notYou = 'Old text';
+    expect(parseJourneyResponse(body)).toEqual(hartwellOpenJourney);
+  });
 
   it.each(checkInCopyKeys)('rejects journey copy without %s', (key) => {
     const body = clone(hartwellOpenJourney);

@@ -43,9 +43,6 @@
       "progressValue": "Step {step} of {total}",
       "doneTitle": "Thank you, {name}. We've received your answers.",
       "doneBody": "{adviser} will be in touch.",
-      "alreadyCompletedTitle": "This check-in has already been completed.",
-      "alreadyCompletedBody": "It was sent to {adviser} on {date}.",
-      "notYou": "Wasn't you? If you didn't send these answers, contact {adviser} straight away.",
       "moneyUnreadable": "Enter an amount in pounds, like 250 or 250.50"
     }
   },

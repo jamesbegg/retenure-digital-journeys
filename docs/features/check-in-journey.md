@@ -101,7 +101,7 @@ A0 lands first. A and B branch from it and share no files.
 
 ## Copy
 
-- **After the journey loads, all UI text comes from `JourneyCopy`** on the wire. It gains `confirm`, `makeChange`, `confirmed`, `cancel`, `save`, `factNote` ("Anything I should know?"), `contactLine`, `urgentLink`, `sendTo` ("Send to {adviser}"), `doneTitle`, `doneBody`, `alreadyCompletedTitle`, `alreadyCompletedBody` and `notYou`. This is agreed with the backend in the same work.
+- **After the journey loads, all UI text comes from `JourneyCopy`** on the wire. It gains `confirm`, `makeChange`, `confirmed`, `cancel`, `save`, `factNote` ("Anything I should know?"), `contactLine`, `urgentLink`, `sendTo` ("Send to {adviser}"), `doneTitle` and `doneBody`. The already-completed page renders from a response with no copy, so it uses app-owned text. This is agreed with the backend in the same work.
 - **Before the journey loads, text is app-owned English** in one constants file: verify, the link-problem page, the locked page and the generic error page. These screens have no adviser data, so they leave out the adviser line and keep a neutral "contact your adviser". Expired and already completed carry the adviser from their response.
 
 ## More states

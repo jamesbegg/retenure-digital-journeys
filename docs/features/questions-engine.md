@@ -384,9 +384,6 @@ interface JourneyCopy {        // every UI string the components take as input
   sendTo: string;              // "Send to {adviser}"
   doneTitle: string;
   doneBody: string;
-  alreadyCompletedTitle: string;
-  alreadyCompletedBody: string;
-  notYou: string;
   close: string;               // Modal
   emailAdviser: string;
   adviserLabel: string;
