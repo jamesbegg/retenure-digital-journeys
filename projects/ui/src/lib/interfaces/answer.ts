@@ -10,7 +10,4 @@ export type AnswerValue =
 
 export type SectionAnswers = Record<string, AnswerValue>;
 
-export type FactCardValue = {
-  changed: { factId: string; newValue: string }[];
-  note?: string;
-} | null;
+export type FactCardValue = Omit<Extract<AnswerValue, { kind: 'confirmFacts' }>, 'kind'> | null;

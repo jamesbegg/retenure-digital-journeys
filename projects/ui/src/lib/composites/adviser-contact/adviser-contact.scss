@@ -20,17 +20,11 @@
 }
 
 .avatar {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
+  @include mixins.initials-chip;
+
   inline-size: 2.75rem;
   block-size: 2.75rem;
   border-radius: var(--ret-radius-pill);
-  background: var(--ret-brand-primary);
-  color: var(--ret-brand-on-primary);
-  font-size: var(--ret-font-size-sm);
-  font-weight: var(--ret-font-weight-bold);
 }
 
 .name {
@@ -70,13 +64,11 @@
   align-items: center;
   padding: var(--ret-space-2) var(--ret-space-3);
   background: var(--ret-color-surface);
-  box-shadow: var(--ret-shadow-card);
 }
 
 :host([data-variant='compact']) .avatar {
   inline-size: 2rem;
   block-size: 2rem;
-  font-size: var(--ret-font-size-xs);
 }
 
 .line {

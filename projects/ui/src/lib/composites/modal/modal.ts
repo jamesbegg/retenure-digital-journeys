@@ -16,14 +16,13 @@ import { nextId } from '../../utils/id';
   imports: [Button],
   templateUrl: './modal.html',
   styleUrl: './modal.scss',
-  host: { '[attr.data-tone]': 'tone()' },
 })
 export class Modal {
   readonly heading = input.required<string>();
   readonly primaryLabel = input.required<string>();
-  readonly secondaryLabel = input.required<string>();
+  readonly secondaryLabel = input<string>();
   readonly tone = input<ModalTone>('default');
-  readonly closeLabel = input('Close');
+  readonly closeLabel = input.required<string>();
   readonly open = model(false);
   readonly primaryPressed = output<void>();
   readonly secondaryPressed = output<void>();
@@ -44,8 +43,8 @@ export class Modal {
       this.opener = document.activeElement as HTMLElement | null;
       dialog.showModal();
       // The safe action first when the primary one is destructive.
-      const [secondary, primary] = dialog.querySelectorAll<HTMLElement>('.actions button');
-      (this.tone() === 'danger' ? secondary : primary).focus();
+      const actions = dialog.querySelectorAll<HTMLElement>('.actions button');
+      actions[this.tone() === 'danger' ? 0 : actions.length - 1].focus();
     });
   }
 

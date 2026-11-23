@@ -40,3 +40,29 @@
     }
   }
 }
+
+@mixin initials-chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  background: var(--ret-brand-primary);
+  color: var(--ret-brand-on-primary);
+  font-size: var(--ret-font-size-sm);
+  font-weight: var(--ret-font-weight-bold);
+}
+
+// Sets --tone-bg and --tone-fg from the host's data-tone. The default is the neutral pair.
+@mixin tones {
+  :host {
+    --tone-bg: var(--ret-color-surface-muted);
+    --tone-fg: var(--ret-color-text-muted);
+  }
+
+  @each $tone in success, warning, danger, info {
+    :host([data-tone='#{$tone}']) {
+      --tone-bg: var(--ret-color-#{$tone}-soft);
+      --tone-fg: var(--ret-color-#{$tone});
+    }
+  }
+}

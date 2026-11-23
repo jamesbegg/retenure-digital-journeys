@@ -50,6 +50,10 @@ function copy(reader: Reader): JourneyCopy {
     alreadyCompletedTitle: reader.string('alreadyCompletedTitle'),
     alreadyCompletedBody: reader.string('alreadyCompletedBody'),
     notYou: reader.string('notYou'),
+    close: reader.string('close'),
+    emailAdviser: reader.string('emailAdviser'),
+    adviserLabel: reader.string('adviserLabel'),
+    progressValue: reader.string('progressValue'),
   };
 }
 

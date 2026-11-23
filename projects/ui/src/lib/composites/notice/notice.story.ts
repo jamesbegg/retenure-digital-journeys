@@ -17,5 +17,10 @@ export class NoticeStory {
       danger: 'A problem, announced as an alert',
       neutral: 'Supporting note, announced politely',
     },
+    live: {
+      off: 'Static: not announced (default)',
+      polite: 'Polite: announced as a status when it appears',
+      assertive: 'Assertive: announced at once as an alert',
+    },
   };
 }

@@ -1,6 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 import { IconName, IconTone } from '../../interfaces/icon';
-import { NoticeTone } from '../../interfaces/notice';
+import { NoticeLive, NoticeTone } from '../../interfaces/notice';
 import { Icon } from '../../primitives/icon/icon';
 
 const ICONS = {
@@ -19,6 +19,11 @@ const ICON_TONES = {
   neutral: 'current',
 } satisfies Record<NoticeTone, IconTone>;
 
+const ROLES = { off: null, polite: 'status', assertive: 'alert' } satisfies Record<
+  NoticeLive,
+  string | null
+>;
+
 @Component({
   selector: 'ret-notice',
   imports: [Icon],
@@ -30,10 +35,9 @@ export class Notice {
   readonly body = input.required<string>();
   readonly heading = input<string>();
   readonly tone = input<NoticeTone>('info');
+  readonly live = input<NoticeLive>('off');
 
-  protected readonly role = computed(() =>
-    this.tone() === 'warning' || this.tone() === 'danger' ? 'alert' : 'status',
-  );
+  protected readonly role = computed(() => ROLES[this.live()]);
   protected readonly icon = computed(() => ICONS[this.tone()]);
   protected readonly iconTone = computed(() => ICON_TONES[this.tone()]);
 }

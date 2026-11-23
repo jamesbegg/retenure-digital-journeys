@@ -11,11 +11,9 @@
   </div>
   <div class="body"><ng-content /></div>
   <div class="actions">
-    <ret-button
-      variant="secondary"
-      [label]="secondaryLabel()"
-      (pressed)="secondaryPressed.emit()"
-    />
+    @if (secondaryLabel(); as label) {
+      <ret-button variant="secondary" [label]="label" (pressed)="secondaryPressed.emit()" />
+    }
     <ret-button
       [variant]="tone() === 'danger' ? 'danger' : 'primary'"
       [label]="primaryLabel()"

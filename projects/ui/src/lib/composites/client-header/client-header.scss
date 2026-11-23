@@ -1,15 +1,25 @@
+@use '../../tokens/mixins';
+
 :host {
   display: block;
+  container-type: inline-size;
   border-block-end: var(--ret-border-width) solid var(--ret-color-divider);
   background: var(--ret-color-surface);
 }
 
 .bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--ret-space-3);
   min-block-size: 4rem;
-  padding-inline: var(--ret-space-4);
+  padding: var(--ret-space-2) var(--ret-space-4);
+}
+
+.with-progress {
+  flex-flow: column nowrap;
+  align-items: stretch;
+  gap: var(--ret-space-1);
 }
 
 .back {
@@ -17,6 +27,7 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  align-self: flex-start;
   inline-size: var(--ret-target-lg);
   block-size: var(--ret-target-lg);
   margin-inline-start: calc(-1 * var(--ret-space-3));
@@ -24,46 +35,44 @@
   border: 0;
   border-radius: var(--ret-radius-pill);
   background: none;
+  color: var(--ret-brand-primary);
   cursor: pointer;
 }
 
 .progress {
-  flex: 1 1 auto;
   min-inline-size: 0;
 }
 
 .mark {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
+  @include mixins.initials-chip;
+
   inline-size: 2rem;
   block-size: 2rem;
   border-radius: var(--ret-radius-sm);
-  background: var(--ret-brand-primary);
-  color: var(--ret-brand-on-primary);
-  font-size: var(--ret-font-size-xs);
-  font-weight: var(--ret-font-weight-bold);
 }
 
 .firm {
   font-weight: var(--ret-font-weight-bold);
 }
 
-:host([data-layout='desktop']) .bar {
-  min-block-size: 4.5rem;
-  padding-inline: max(var(--ret-space-6), calc((100% - 72rem) / 2));
-}
+// Rem units scale with text size, so 200% text needs twice the width before the wide layout.
+@container (min-width: 48rem) {
+  .bar {
+    min-block-size: 4.5rem;
+    padding-inline: max(var(--ret-space-6), calc((100% - 72rem) / 2));
+  }
 
-:host([data-layout='desktop']) .with-progress {
-  display: grid;
-  grid-template-columns: 1fr minmax(0, 24rem) 1fr;
-}
+  .with-progress {
+    display: grid;
+    grid-template-columns: 1fr minmax(0, 24rem) 1fr;
+    align-items: center;
+  }
 
-:host([data-layout='desktop']) .with-progress .progress {
-  grid-column: 2;
-}
+  .with-progress .back {
+    align-self: center;
+  }
 
-:host([data-layout='mobile']) .with-progress {
-  padding-block: var(--ret-space-2);
+  .with-progress .progress {
+    grid-column: 2;
+  }
 }

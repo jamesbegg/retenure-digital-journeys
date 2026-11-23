@@ -1,7 +1,7 @@
 <div class="text">
-  <span class="label">{{ label() }}</span>
+  <span class="label" [id]="labelId">{{ label() }}</span>
   @if (meta()) {
-    <span class="meta">{{ meta() }}</span>
+    <span class="meta" [id]="metaId">{{ meta() }}</span>
   }
 </div>
 <div
@@ -10,7 +10,9 @@
   aria-valuemin="0"
   [attr.aria-valuemax]="total()"
   [attr.aria-valuenow]="step()"
-  [attr.aria-label]="label()"
+  [attr.aria-valuetext]="valueText()"
+  [attr.aria-labelledby]="labelId"
+  [attr.aria-describedby]="meta() ? metaId : null"
   [attr.data-variant]="variant()"
 >
   @if (variant() === 'segmented') {

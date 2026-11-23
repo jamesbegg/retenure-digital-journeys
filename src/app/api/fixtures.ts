@@ -65,6 +65,10 @@ export const copy = {
   alreadyCompletedTitle: 'This check-in has already been completed.',
   alreadyCompletedBody: 'It was sent to {adviser} on {date}.',
   notYou: "Wasn't you? If you didn't send these answers, contact {adviser} straight away.",
+  close: 'Close',
+  emailAdviser: 'Email {adviser}',
+  adviserLabel: 'Your adviser',
+  progressValue: 'Step {step} of {total}',
 } satisfies JourneyCopy;
 
 const hartwellAdviser = { name: 'Helen Hartwell', email: 'helen@hartwell.example' };

@@ -30,4 +30,8 @@ export interface JourneyCopy {
   alreadyCompletedTitle: string;
   alreadyCompletedBody: string;
   notYou: string;
+  close: string;
+  emailAdviser: string;
+  adviserLabel: string;
+  progressValue: string;
 }

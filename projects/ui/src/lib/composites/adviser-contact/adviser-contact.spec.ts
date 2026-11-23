@@ -9,6 +9,7 @@ const inputs = {
   phone: '0113 496 0123',
   contactLine: "Rather talk it through? Email me and we'll arrange a call.",
   emailLabel: 'Email Helen',
+  label: 'Your adviser',
 };
 
 describe('AdviserContact', () => {
@@ -29,6 +30,15 @@ describe('AdviserContact', () => {
     );
     expect(screen.getByRole('link', { name: '0113 496 0123' }).getAttribute('href')).toBe(
       'tel:01134960123',
+    );
+  });
+
+  it('keeps a plus sign in the address', async () => {
+    await render(AdviserContact, {
+      inputs: { ...inputs, email: 'helen+checkin@hartwell.example' },
+    });
+    expect(screen.getByRole('link', { name: 'Email Helen' }).getAttribute('href')).toBe(
+      'mailto:helen+checkin@hartwell.example',
     );
   });
 

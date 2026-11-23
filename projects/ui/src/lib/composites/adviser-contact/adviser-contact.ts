@@ -14,10 +14,10 @@ export class AdviserContact {
   readonly initials = input.required<string>();
   readonly email = input.required<string>();
   readonly contactLine = input.required<string>();
-  readonly emailLabel = input('Email');
+  readonly emailLabel = input.required<string>();
   readonly jobTitle = input<string>();
   readonly phone = input<string>();
-  readonly label = input('Your adviser');
+  readonly label = input.required<string>();
   readonly variant = input<AdviserContactVariant>('full');
 
   protected readonly tel = computed(() => this.phone()?.replace(/\s/g, ''));
