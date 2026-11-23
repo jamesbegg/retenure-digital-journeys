@@ -16,18 +16,11 @@
   padding: var(--ret-space-2) var(--ret-space-4);
 }
 
-.with-progress {
-  flex-flow: column nowrap;
-  align-items: stretch;
-  gap: var(--ret-space-1);
-}
-
 .back {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  align-self: flex-start;
   inline-size: var(--ret-target-lg);
   block-size: var(--ret-target-lg);
   margin-inline-start: calc(-1 * var(--ret-space-3));
@@ -40,6 +33,7 @@
 }
 
 .progress {
+  flex: 1 1 12rem;
   min-inline-size: 0;
 }
 
@@ -65,11 +59,6 @@
   .with-progress {
     display: grid;
     grid-template-columns: 1fr minmax(0, 24rem) 1fr;
-    align-items: center;
-  }
-
-  .with-progress .back {
-    align-self: center;
   }
 
   .with-progress .progress {
