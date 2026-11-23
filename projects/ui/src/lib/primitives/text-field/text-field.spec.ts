@@ -99,6 +99,14 @@ describe('TextField', () => {
     expect(field.hasAttribute('aria-invalid')).toBe(false);
   });
 
+  it('keeps the pound sign inside the same control as the amount, named by the field', async () => {
+    await renderField({ type: 'money' });
+    const input = screen.getByRole('textbox', { name: 'Amount' });
+    const prefix = screen.getByText('£');
+    expect(prefix.parentElement).toBe(input.parentElement);
+    expect(description(input)).toContain('£');
+  });
+
   it('clears on reset', async () => {
     const { control, fixture } = await renderField({ type: 'money' });
     control.setValue('3000');
