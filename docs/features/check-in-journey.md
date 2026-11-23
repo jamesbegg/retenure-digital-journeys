@@ -94,10 +94,15 @@ Builds the client side of `docs/features/questions-engine.md` from the user's ap
 | --- | --- | --- | --- |
 | 0 | A0: shared components and types | New `projects/ui` components, all from the canvas component library: `ClientHeader` (Back and progress), `ProgressBar`, `AdviserContact`, `Notice`, `Badge`, `Modal` (dialog). Also the `JourneyCopy` additions, `SectionAnswers`, `FactCardValue`, the `confirmFacts` `note`, the light-only cream tokens (`_tokens.scss`), `public-api.ts` and `stories.ts`. | merged main |
 | 1 | A: questions on screen | `composites/fact-card` (with a read-only `summary` variant for Check your answers), `composites/question-renderer`, the `confirmFacts` parser and fixtures, and `src/app/api/wire-samples/` (hand-copied, with the source commit in a README line) and its spec. A adds its own exports and story entries. | A0 |
-| 1 | B: services | `src/app/{tenant,journey}`, app `interfaces/`, `app.config.ts` | A0 |
+| 1 | B: services and the local mock | `src/app/{tenant,journey}`, app `interfaces/`, `app.config.ts`, and a dev-only mock of `/client/*` (`src/app/dev-mock/`, swapped out of production by `fileReplacements` like `dev-routes.ts`, with `check-dist` guarding it). The mock serves the backend's wire samples, with a `?mock=` scenario switch: happy, wrongDob, locked, linkReissued, alreadyCompleted, expired, sessionExpired, lostSubmit. Playwright reuses the same samples. | A0 |
 | 2 | C: screens and e2e | `src/app/journeys/check-in/**`, `app.routes.ts`, `e2e/**` (journey routes join a11y and zoom; tenancy loses `fixme`) | A, B |
 
 A0 lands first. A and B branch from it and share no files.
+
+## Local running
+
+- **Now:** `npm start` runs the whole journey against the dev-only mock.
+- **Once backend U6 and U7 merge:** the backend's `seed:check-in` (approved by the user on 2026-11-23) creates the Shah household with an approved pack and prints a `/start#t=…` link. A local edge stand-in adds the host and the secret, and the client's dev proxy points at `npm run offline`. The mock and the real API share the same wire.
 
 ## Copy
 
