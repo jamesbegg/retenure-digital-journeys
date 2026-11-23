@@ -67,8 +67,7 @@ Builds the client side of `docs/features/questions-engine.md` from the user's ap
 - `@retenure/ui` `interfaces/`:
   - `FactCardValue = { changed: { factId, newValue }[]; note?: string } | null`, the FactCard CVA value
   - `SectionAnswers = Record<questionId, AnswerValue>`
-  - `QuestionRenderer` inputs: `section: Section`, `answers: SectionAnswers`, `copy: JourneyCopy`, `members: Person[]`
-  - `QuestionRenderer` outputs: `answersChange: SectionAnswers`, `complete: boolean`
+  - `QuestionRenderer`: see Renderer contract below (one API: `section: RenderableSection`, `answers` as a two-way `model<SectionAnswers>()`, `copy`; output `complete`)
 - `Question` gains `(QuestionBase & { kind: 'confirmFacts'; facts: HeldFact[] })`. `AnswerValue`'s `confirmFacts` gains `note?: string`. The parser accepts `confirmFacts`, with 1 to 8 facts, unique fact ids, and `required` true.
 - App `interfaces/`: `JourneyState = 'loading' | 'ready' | 'error' | 'blocked'`, and the screen states.
 
@@ -94,15 +93,21 @@ Builds the client side of `docs/features/questions-engine.md` from the user's ap
 | --- | --- | --- | --- |
 | 0 | A0: shared components and types | New `projects/ui` components, all from the canvas component library: `ClientHeader` (Back and progress), `ProgressBar`, `AdviserContact`, `Notice`, `Badge`, `Modal` (dialog). Also the `JourneyCopy` additions, `SectionAnswers`, `FactCardValue`, the `confirmFacts` `note`, the light-only cream tokens (`_tokens.scss`), `public-api.ts` and `stories.ts`. | merged main |
 | 1 | A: questions on screen | `composites/fact-card` (with a read-only `summary` variant for Check your answers), `composites/question-renderer`, the `confirmFacts` parser and fixtures, and `src/app/api/wire-samples/` (hand-copied, with the source commit in a README line) and its spec. A adds its own exports and story entries. | A0 |
-| 1 | B: services | `src/app/{tenant,journey}`, app `interfaces/`, `app.config.ts` | A0 |
+| 1 | B: services and the local mock | `src/app/{tenant,journey}`, app `interfaces/`, `app.config.ts`, and a dev-only mock of `/client/*` (`src/app/dev-mock/`, swapped out of production by `fileReplacements` like `dev-routes.ts`, with `check-dist` guarding it). The mock serves the backend's wire samples as its open-journey baseline (Northgate's open journey is the same sample with the firm and adviser swapped), plus hand-built bodies only for responses the backend hasn't sampled yet, with a `?mock=` scenario switch: happy, wrongDob, locked, linkReissued, alreadyCompleted, expired, sessionExpired, lostSubmit. Playwright reuses the same samples. | A0 |
 | 2 | C: screens and e2e | `src/app/journeys/check-in/**`, `app.routes.ts`, `e2e/**` (journey routes join a11y and zoom; tenancy loses `fixme`) | A, B |
 
 A0 lands first. A and B branch from it and share no files.
 
+## Local running
+
+- **Now:** `npm start` runs the whole journey against the dev-only mock.
+- **Once backend U6 and U7 merge:** the backend's `seed:check-in` (approved by the user on 2026-11-23) creates the Shah household with an approved pack and prints a `/start#t=…` link. A local edge stand-in adds the host and the secret, and the client's dev proxy points at `npm run offline`. The mock and the real API share the same wire.
+
 ## Copy
 
-- **After the journey loads, all UI text comes from `JourneyCopy`** on the wire. It gains `confirm`, `makeChange`, `confirmed`, `cancel`, `save`, `factNote` ("Anything I should know?"), `contactLine`, `urgentLink`, `sendTo` ("Send to {adviser}"), `doneTitle` and `doneBody`. The already-completed page renders from a response with no copy, so it uses app-owned text. This is agreed with the backend in the same work.
-- **Before the journey loads, text is app-owned English** in one constants file: verify, the link-problem page, the locked page and the generic error page. These screens have no adviser data, so they leave out the adviser line and keep a neutral "contact your adviser". Expired and already completed carry the adviser from their response.
+- **After the journey loads, all UI text comes from `JourneyCopy`** on the wire. It gains `confirm`, `makeChange`, `confirmed`, `cancel`, `save`, `factNote` ("Anything I should know?"), `contactLine`, `urgentLink`, `sendTo` ("Send to {adviser}"), `doneTitle` ("Thank you, {name}. …"), `doneBody`, `close`, `emailAdviser`, `adviserLabel`, `progressValue` and `moneyUnreadable`. This is agreed with the backend in the same work.
+- **Pages without a journey's copy use app-owned English** in one constants file: verify, the link-problem page, the locked page, the generic error page, already completed, expired, and Done reached from a receipt-only response. Those responses carry no `JourneyCopy`. Verify, link-problem, locked and error have no adviser data, so they leave out the adviser line and say "contact your adviser". Expired and already completed take the adviser from their response.
+- **The respondent, not the lead.** Done fills `{name}` from the member named by `client.respondentId`, which may be a partner. The client never uses `client.lead` for this. `respondentId` is optional on the wire until backend U5b adds it, and becomes required then. Without it, Done uses the neutral "Thank you. We've received your answers."
 
 ## More states
 
@@ -117,7 +122,7 @@ A0 lands first. A and B branch from it and share no files.
 
 ## Renderer contract
 
-- **Inputs:** `section`, `answers` as a `model<SectionAnswers>()` (two-way), and `copy`. There's no `members` input: model-written prompts already name the person.
+- **Inputs:** `section` as a `RenderableSection` (card blocks of the v1 kinds only, enforced by type; any other kind that reaches it at runtime throws with the question id, never silently dropped), `answers` as a `model<SectionAnswers>()` (two-way), and `copy`. There's no `members` input: model-written prompts already name the person.
 - **Output:** `complete`, emitted on every change. It's true when every required card is answered and no shown field has a validation error. An optional blank counts as complete. A required field blurred while blank shows its error and doesn't count as answered.
 - **FactCard** renders only the `confirmFacts` question kind. The `facts` block stays rejected.
 - **The story** has one fixture per v1 kind, including the YesNo detail box and a radio option input. There are no union inputs, so `Variants` is empty.

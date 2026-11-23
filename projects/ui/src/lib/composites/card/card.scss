@@ -22,8 +22,11 @@
   font-size: var(--ret-font-size-lg);
 }
 
+// Square start corners so the edge runs straight from top to bottom.
 .active {
   border-inline-start: var(--ret-space-1) solid var(--ret-brand-primary);
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
 }
 
 .answer {
