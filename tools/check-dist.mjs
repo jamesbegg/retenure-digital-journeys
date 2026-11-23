@@ -2,7 +2,14 @@ import { globSync, readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const FORBIDDEN = ['ret-gallery', 'Hartwell', 'Northgate', 'Priya Shah', 'Tom Shah'];
+const FORBIDDEN = [
+  'ret-gallery',
+  'Hartwell',
+  'Northgate',
+  'Priya Shah',
+  'Tom Shah',
+  'ret-dev-mock',
+];
 
 export function checkDist(dir) {
   const files = globSync('**/*.{js,html,css}', { cwd: dir });
@@ -12,7 +19,7 @@ export function checkDist(dir) {
     const text = readFileSync(join(dir, file), 'utf8');
     return FORBIDDEN.filter((word) => text.includes(word)).map(
       (word) =>
-        `${file}: "${word}" is gallery or synthetic data and must not ship. Keep it in dev-routes.ts.`,
+        `${file}: "${word}" is gallery or synthetic data and must not ship. Keep it behind dev-routes.ts or dev-mock.ts.`,
     );
   });
 }

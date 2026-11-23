@@ -2,7 +2,7 @@ import { JourneyCopy } from '@retenure/ui';
 import { JourneyResponse, VerificationResponse } from '../interfaces/journey';
 import { TenantResponse } from '../interfaces/tenant';
 
-// Synthetic firms and households only (docs/agentic-memory.md). Imported by specs and e2e, never by the app.
+// Synthetic firms and households only (docs/agentic-memory.md). Imported by specs, e2e and the dev-only mock, never by production code.
 
 export const hartwellTenant = {
   schemaVersion: 1,

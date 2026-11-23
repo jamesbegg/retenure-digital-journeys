@@ -411,6 +411,14 @@ describe('check-dist', () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+  it('fails a build containing the dev mock', () => {
+    const root = tree({ 'main.js': 'console.info("[ret-dev-mock] submission");' });
+    try {
+      assert.match(checkDist(root).join(), /ret-dev-mock/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
   it('fails a synthetic name in a nested html or css file', () => {
     const root = tree({
       'main.js': '',
