@@ -40,6 +40,11 @@ export class CheckInFrame {
     const valueText = fill(copy.progressValue, { step: progress.step, total: progress.total });
     return { ...progress, meta: valueText, valueText };
   });
+  // The press itself counts as activity and may already have renewed the session.
+  protected moreTime() {
+    if (this.journey.idleWarning()) void this.journey.renew();
+  }
+
   protected idleChanged(open: boolean) {
     if (!open && this.journey.idleWarning()) void this.journey.renew();
   }
