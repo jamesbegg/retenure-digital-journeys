@@ -16,6 +16,7 @@ test('the token leaves the address bar and a wrong date shows the notice', async
   await typeDate(page, { day: '14', month: '03', year: '1978' });
   await page.getByRole('button', { name: 'Confirm' }).click();
   await expect(page.getByText("That date doesn't match")).toBeVisible();
+  await expect(page.locator('ret-notice')).toBeFocused();
   await typeDate(page);
   await page.getByRole('button', { name: 'Confirm' }).click();
   await expect(heading(page)).toHaveText('Your annual check-in');
@@ -74,5 +75,15 @@ test('an expired or completed check-in names the adviser and how to reach them',
 test('focus moves to the heading when the page changes', async ({ page }) => {
   await verify(page);
   await expect(heading(page)).toHaveText('Your annual check-in');
+  await expect(heading(page)).toBeFocused();
+});
+
+test('when verifying again returns to the form with no notice, focus is on the heading', async ({
+  page,
+}) => {
+  await page.goto(startUrl('sessionExpired'));
+  await typeDate(page);
+  await page.getByRole('button', { name: 'Confirm' }).click();
+  await expect(heading(page)).toHaveText('Welcome to your check-in');
   await expect(heading(page)).toBeFocused();
 });

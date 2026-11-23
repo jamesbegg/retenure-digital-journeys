@@ -3,17 +3,23 @@
   [state]="journey.stage() === 'loading' ? 'loading' : 'ready'"
 >
   @if (journey.verificationFailed()) {
-    <ret-notice live="assertive" [heading]="copy.wrongHeading" [body]="copy.wrongBody" />
+    <ret-notice
+      tabindex="-1"
+      live="assertive"
+      [heading]="copy.wrongHeading"
+      [body]="copy.wrongBody"
+    />
   }
   @if (journey.verifyUnreachable()) {
     <ret-notice
+      tabindex="-1"
       tone="warning"
       live="assertive"
       [heading]="copy.unreachableHeading"
       [body]="copy.unreachableBody"
     />
   }
-  <form class="form" [formGroup]="form" (ngSubmit)="submit()">
+  <form id="verify-form" [formGroup]="form" (ngSubmit)="submit()">
     <ret-text-field
       type="date"
       autocomplete="bday"
@@ -22,6 +28,13 @@
       [hint]="copy.hint"
       [error]="error()"
     />
-    <ret-button type="submit" icon="check" [label]="copy.submit" [pending]="journey.busy()" />
   </form>
+  <ret-button
+    slot="actions"
+    type="submit"
+    form="verify-form"
+    icon="check"
+    [label]="copy.submit"
+    [pending]="journey.busy()"
+  />
 </ret-check-in-frame>
