@@ -130,6 +130,29 @@ describe('dev mock', () => {
     expect(failure?.status).toBe(500);
   });
 
+  it.each(['hartwell', 'northgate'])(
+    'names the same adviser in the open, expired and submitted responses for %s',
+    async (firm) => {
+      const adviserOf = async (scenario: string) => {
+        TestBed.resetTestingModule();
+        const http = mock(`?mock=${scenario}&firm=${firm}`);
+        const body = await firstValueFrom(
+          http.post('/client/verification', { dateOfBirth: '1983-04-17' }),
+        );
+        const result = parseVerificationResponse(body);
+        if (result.status !== 'open') return result.adviser;
+        return (
+          parseJourneyResponse(await firstValueFrom(http.get('/client/journey'))) as {
+            adviser: unknown;
+          }
+        ).adviser;
+      };
+      const open = await adviserOf('happy');
+      expect(await adviserOf('expired')).toEqual(open);
+      expect(await adviserOf('alreadyCompleted')).toEqual(open);
+    },
+  );
+
   it('expires the session once in sessionExpired', async () => {
     const http = mock('?mock=sessionExpired');
     await firstValueFrom(http.post('/client/verification', { dateOfBirth: '1983-04-17' }));

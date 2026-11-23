@@ -26,7 +26,6 @@
   transform: none;
 }
 
-.header,
 .main,
 .footer {
   inline-size: 100%;
@@ -36,7 +35,7 @@
 }
 
 .header {
-  padding-block: var(--ret-space-4);
+  inline-size: 100%;
 }
 
 .header:empty,

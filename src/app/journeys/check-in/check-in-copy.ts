@@ -51,10 +51,11 @@ export const appCopy: AppCopy = {
     },
     'already-completed': {
       heading: 'This check-in has already been completed',
-      paragraphs: [
-        'It was sent to {adviser} on {date}.',
-        "Wasn't you? If you didn't send these answers, contact {adviser} straight away.",
-      ],
+      paragraphs: ['It was sent to {adviser} on {date}.'],
+      aside: {
+        heading: "Wasn't you?",
+        body: "If you didn't send these answers, contact {adviser} straight away.",
+      },
     },
     expired: {
       heading: 'This check-in link has expired',

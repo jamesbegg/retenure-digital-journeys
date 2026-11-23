@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/angular';
+import { screen, within } from '@testing-library/angular';
 import { hartwellExpiredJourney, hartwellSubmittedJourney } from '../../../../api/fixtures';
 import { openPage, TEST_DATE_OF_BIRTH } from '../../../../testing/journey-harness';
 import routes from '../../check-in.routes';
@@ -45,8 +45,10 @@ describe('Status pages', () => {
     await verifyWith('submitted');
     screen.getByRole('heading', { level: 1, name: 'This check-in has already been completed' });
     screen.getByText(/It was sent to Helen Hartwell on \d{1,2} \w+ \d{4}\./);
-    screen.getByText(
-      "Wasn't you? If you didn't send these answers, contact Helen Hartwell straight away.",
+    const card = screen.getByRole('group', { name: "Wasn't you?" });
+    within(card).getByRole('heading', { level: 2, name: "Wasn't you?" });
+    within(card).getByText(
+      "If you didn't send these answers, contact Helen Hartwell straight away.",
     );
     screen.getByRole('link', { name: 'Email Helen Hartwell' });
   });

@@ -7,6 +7,8 @@ export type StatusStage = Exclude<JourneyStage, 'verify' | 'loading' | 'ready' |
 export interface StatusCopy {
   heading: string;
   paragraphs: string[];
+  // A second section under the paragraphs, on its own card.
+  aside?: { heading: string; body: string };
 }
 
 export interface CheckInProgress {

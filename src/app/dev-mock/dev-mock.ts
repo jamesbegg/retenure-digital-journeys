@@ -72,6 +72,7 @@ export function createDevMock(search: string, hostname: string): HttpInterceptor
   const expired = {
     ...(northgate ? northgateExpiredJourney : hartwellExpiredJourney),
     journeyId: open.journey.id,
+    adviser: open.adviser,
   };
   const submittedBase = northgate ? northgateSubmittedJourney : hartwellSubmittedJourney;
   const expiresAt = () => new Date(Date.now() + 30 * 60_000).toISOString();
@@ -81,6 +82,7 @@ export function createDevMock(search: string, hostname: string): HttpInterceptor
   const submitted = () => ({
     ...submittedBase,
     journeyId: open.journey.id,
+    adviser: open.adviser,
     ...(submissionId && { submissionId }),
   });
 
