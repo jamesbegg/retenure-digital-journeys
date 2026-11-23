@@ -374,6 +374,24 @@ interface JourneyCopy {        // every UI string the components take as input
   timeoutWarning: string;      // "You've been inactive. Do you need more time?"
   moreTime: string;            // "I need more time"
   followUpsCleared: string;    // announced when a No closes follow-ups
+  confirm: string;             // FactCard
+  makeChange: string;
+  confirmed: string;
+  cancel: string;
+  save: string;
+  factNote: string;            // "Anything I should know?"
+  contactLine: string;         // the adviser line under every screen
+  urgentLink: string;
+  sendTo: string;              // "Send to {adviser}"
+  doneTitle: string;
+  doneBody: string;
+  alreadyCompletedTitle: string;
+  alreadyCompletedBody: string;
+  notYou: string;
+  close: string;               // Modal
+  emailAdviser: string;
+  adviserLabel: string;
+  progressValue: string;       // "Step {step} of {total}"
 }
 
 interface ClientInfo {
@@ -491,7 +509,7 @@ type AnswerValue =
   | { kind: 'text'; value: string }                         // trimmed
   | { kind: 'money'; value: string }                         // "1250.50": pounds, no symbol or commas
   | { kind: 'date'; value: string }                          // ISO YYYY-MM-DD
-  | { kind: 'confirmFacts'; changed: { factId: string; newValue: string }[] }   // empty: all still right
+  | { kind: 'confirmFacts'; changed: { factId: string; newValue: string }[]; note?: string }   // empty: all still right
   | { kind: 'goals'; changes?: string };                     // absent: still right
 
 interface SubmissionBody {
@@ -516,7 +534,7 @@ interface SubmissionReceipt {
 | `text` | the value is trimmed | `required`, validators | non-empty after trimming |
 | `money` | TextField emits a readable amount or the raw text; `moneyAmount` is attached automatically to report unreadable text | `required`, `moneyAmount` min and max | a readable amount |
 | `date` | TextField's `incompleteDate` and `invalidDate` | `required`, `dateOfBirth` | a complete, real date |
-| `confirmFacts` | none | none (always required) | the client chose Still right, or Something's changed and entered the change |
+| `confirmFacts` | none | none (always required) | the client pressed Confirm, or Make a change and saved it (a changed fact may not be blank) |
 | `goals` | none | none (always required) | the same |
 
 - **An optional question left blank** is not in the batch, and its card still counts as complete for Continue.
@@ -562,7 +580,7 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
 
 ## Release scope
 
-- **v1 supports these question kinds:** `yesNo` (with an optional detail box), `radio` (3 to 6 options, at most one with an `input`), `text`, `money` and `date`. The model writes every question from this catalogue, and the adviser's approval covers its words. Contact details are held facts, confirmed with `yesNo` plus a detail box, so there is no `email` or `tel` kind.
+- **v1 supports these question kinds:** `yesNo` (with an optional detail box), `radio` (3 to 6 options, at most one with an `input`), `text`, `money`, `date` and `confirmFacts` (1 to 8 facts with unique ids, always required, shown in a FactCard). The model writes every question from this catalogue, and the adviser's approval covers its words. Contact details are held facts, confirmed with `yesNo` plus a detail box, so there is no `email` or `tel` kind.
 - **v1 supports one block type:** `card`.
 - **v1 has no follow-ups.** They need QuestionCard (#35), so they arrive with it.
 - **Enforced in three places:**
@@ -571,7 +589,7 @@ check answers ─▶ JourneyService.submit()     POST /submission { submissionId
   - **The v1 parser** accepts only the v1 kinds and block, and rejects any `followUps`. The wire types keep the full unions for later releases, but the parser enforces the v1 subset.
 - **Later, together with their components:**
   - `checkbox` (#16)
-  - `confirmFacts` and `goals` (#31, #32)
+  - `goals` (#32)
   - the `notice` and `facts` blocks (#23, #31)
   - follow-ups, with QuestionCard (#35)
 - **"New journey" means new data.** A new configuration of an existing `JourneyMeta.type` is backend data only. A new `type` value is a code change.
@@ -670,7 +688,7 @@ It must decide retention, who can see the data, and whether identifiers are scop
   - each v1 kind renders its component, and `personId` questions name the person
   - the per-kind completion rules, including optional blanks, `false` and whitespace
   - an option-input error appears on its field
-  - the v1 parser rejects `checkbox`, `confirmFacts`, `goals`, `notice`, `facts` and any `followUps`
+  - the v1 parser rejects `checkbox`, `goals`, `notice`, `facts` and any `followUps`
   - (after v1) follow-ups close, clear and announce
 - **`JourneyService`, with HTTP mocked:**
   - renewal is throttled and scheduled from `expiresAt`, never from a local clock alone

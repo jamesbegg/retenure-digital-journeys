@@ -88,7 +88,7 @@ describe('parseJourneyResponse', () => {
     }
   });
 
-  it.each(['checkbox', 'confirmFacts', 'goals', 'email', 'tel', 'slider'])(
+  it.each(['checkbox', 'goals', 'email', 'tel', 'slider'])(
     'rejects the kind %s in v1',
     (kind) => {
       const body = clone(hartwellOpenJourney);
@@ -96,6 +96,44 @@ describe('parseJourneyResponse', () => {
       expect(() => parseJourneyResponse(body)).toThrow(/question\.kind: expected one of/);
     },
   );
+
+  describe('confirmFacts', () => {
+    const facts = (count: number) =>
+      Array.from({ length: count }, (_, i) => ({ id: `f${i}`, label: `Label ${i}`, value: 'x' }));
+    const withFacts = (patch: Record<string, unknown>) => {
+      const body = clone(hartwellOpenJourney);
+      Object.assign(firstQuestion(body), { kind: 'confirmFacts', required: true, ...patch });
+      return body;
+    };
+
+    it('accepts one to eight facts and keeps them', () => {
+      for (const count of [1, 8]) {
+        const question = firstQuestion(parseJourneyResponse(withFacts({ facts: facts(count) })));
+        expect(question.kind).toBe('confirmFacts');
+        expect(question.facts).toEqual(facts(count));
+      }
+    });
+
+    it('keeps a fact for a household member and rejects one for a stranger', () => {
+      const fact = { ...facts(1)[0], personId: 'per-priya' };
+      expect(firstQuestion(parseJourneyResponse(withFacts({ facts: [fact] }))).facts).toEqual([
+        fact,
+      ]);
+      const stranger = { ...fact, personId: 'per-someone-else' };
+      expect(() => parseJourneyResponse(withFacts({ facts: [stranger] }))).toThrow(/personId/);
+    });
+
+    it.each([
+      ['no facts', { facts: [] }],
+      ['nine facts', { facts: facts(9) }],
+      ['a missing facts list', {}],
+      ['duplicate fact ids', { facts: [...facts(2), { ...facts(1)[0] }] }],
+      ['an optional question', { facts: facts(1), required: false }],
+      ['a fact with no value', { facts: [{ id: 'f0', label: 'Label' }] }],
+    ])('rejects %s', (_, patch) => {
+      expect(() => parseJourneyResponse(withFacts(patch))).toThrow(ParseError);
+    });
+  });
 
   it.each([
     { type: 'notice', tone: 'info', text: 'Hello' },
