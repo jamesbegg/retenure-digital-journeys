@@ -122,8 +122,10 @@ export function createDevMock(search: string, hostname: string): HttpInterceptor
     if (path === '/client/journey') {
       return reply(submissionId ? submitted() : { ...open, expiresAt: expiresAt() });
     }
-    if (path === '/client/journey/session')
+    if (path === '/client/journey/session') {
+      log('session renewed');
       return reply({ schemaVersion: 1, expiresAt: expiresAt() });
+    }
     if (path === '/client/journey/submission') {
       const body = request.body as SubmissionBody;
       submissionId = body.submissionId;

@@ -69,3 +69,15 @@ export async function openPage(routes: Routes, url: string, hash?: string) {
   };
   return { ...journey, harness, path, settle };
 }
+
+// Every required question of the sample journey answered, as a client who has finished would have.
+export function answerEverything(journey: JourneyService) {
+  journey.setAnswers('sec-about-you', {
+    'q-email': { kind: 'yesNo', value: false, detail: 'priya@example.test' },
+    'q-tom-dob': { kind: 'date', value: '1978-03-14' },
+  });
+  journey.setAnswers('sec-changes', {
+    'q-moved': { kind: 'yesNo', value: true },
+    'q-spending': { kind: 'radio', value: 'same' },
+  });
+}

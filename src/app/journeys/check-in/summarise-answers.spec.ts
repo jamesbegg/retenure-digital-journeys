@@ -118,4 +118,52 @@ describe('summariseAnswers', () => {
   it('shows pence only when the amount has them', () => {
     expect(rows({ mn: { kind: 'money', value: '250.5' } })['mn'][1]).toBe('£250.50');
   });
+
+  it('shows the stored value when a radio option is no longer offered', () => {
+    expect(rows({ rd: { kind: 'radio', value: 'gone' } })['rd'][1]).toBe('gone');
+  });
+
+  it('adds a radio option input as typed when it is not an amount', () => {
+    const text: RenderableSection = {
+      ...section,
+      blocks: [
+        {
+          type: 'card',
+          question: {
+            id: 'rd',
+            version: 1,
+            kind: 'radio',
+            prompt: 'Who helps?',
+            required: true,
+            options: [
+              {
+                value: 'rel',
+                label: 'A relative',
+                input: { label: 'Who?', type: 'text', required: true },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const [row] = summariseAnswers(
+      text,
+      { rd: { kind: 'radio', value: 'rel', input: 'Aunt Jo' } },
+      copy,
+    );
+    expect(row.value).toBe('A relative. Aunt Jo');
+  });
+
+  it('names a changed fact by its id when the question no longer holds it', () => {
+    const given: Record<string, AnswerValue> = {
+      cf: { kind: 'confirmFacts', changed: [{ factId: 'f9', newValue: 'Other' }] },
+    };
+    expect(rows(given)['cf'][1]).toBe('f9: Other');
+  });
+
+  it('refuses an answer kind that is never shown, rather than dropping it', () => {
+    expect(() => summariseAnswers(section, { yn: { kind: 'goals', changes: 'x' } }, copy)).toThrow(
+      /yn/,
+    );
+  });
 });

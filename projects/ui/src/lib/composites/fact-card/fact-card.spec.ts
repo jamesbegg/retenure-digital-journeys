@@ -220,6 +220,17 @@ describe('FactCard (summary)', () => {
     expect(within(region).queryByRole('textbox')).toBeNull();
   });
 
+  it('hides Make a change when changing is not allowed, for the rows alone', async () => {
+    await render(
+      `<ret-fact-card variant="summary" heading="Your goals" [facts]="facts" ${copy}
+        [changeable]="false" />`,
+      { imports: [FactCard], componentProperties: { facts } },
+    );
+    const region = screen.getByRole('region', { name: 'Your goals' });
+    within(region).getByText('£48,000');
+    expect(within(region).queryByRole('button')).toBeNull();
+  });
+
   it('shows a saved note under the rows with the note label', async () => {
     await render(
       `<ret-fact-card variant="summary" heading="Your goals" [facts]="facts" ${copy}

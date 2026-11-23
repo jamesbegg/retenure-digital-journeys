@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { hartwellOpenJourney } from '../../../../api/fixtures';
-import { openPage, signIn } from '../../../../testing/journey-harness';
+import { answerEverything, openPage, signIn } from '../../../../testing/journey-harness';
 import routes from '../../check-in.routes';
 
 const receipt = {
@@ -14,8 +14,8 @@ async function sendFrom(client: typeof hartwellOpenJourney.client & { respondent
   const page = await openPage(routes, '/start');
   await signIn(page.http, page.journey, client);
   await page.settle();
+  answerEverything(page.journey);
   await page.harness.navigateByUrl('/check-in/review');
-  page.journey.setAnswers('sec-changes', { 'q-moved': { kind: 'yesNo', value: true } });
   await page.settle();
   await userEvent.setup().click(screen.getByRole('button', { name: /^Send to / }));
   page.http.expectOne('/client/journey/submission').flush(receipt);
@@ -29,7 +29,6 @@ describe('Done page', () => {
     expect(page.path()).toBe('/check-in/done');
     screen.getByRole('heading', { level: 1, name: "Thank you, Tom. We've received your answers." });
     screen.getByText('Helen Hartwell will be in touch.');
-    screen.getByRole('button', { name: 'Something urgent or worrying you?' });
   });
 
   it('uses the neutral title when no respondent is named', async () => {

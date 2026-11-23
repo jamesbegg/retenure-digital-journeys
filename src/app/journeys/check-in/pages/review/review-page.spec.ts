@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { hartwellOpenJourney } from '../../../../api/fixtures';
-import { openPage, signIn } from '../../../../testing/journey-harness';
+import { answerEverything, openPage, signIn } from '../../../../testing/journey-harness';
 import routes from '../../check-in.routes';
 
 const [first, second] = hartwellOpenJourney.sections;
@@ -9,11 +9,7 @@ const [first, second] = hartwellOpenJourney.sections;
 async function openReview() {
   const page = await openPage(routes, '/start');
   await signIn(page.http, page.journey);
-  page.journey.setAnswers(first.id, {
-    'q-email': { kind: 'yesNo', value: false, detail: 'priya@example.test' },
-    'q-tom-dob': { kind: 'date', value: '1978-03-14' },
-  });
-  page.journey.setAnswers(second.id, { 'q-moved': { kind: 'yesNo', value: true } });
+  answerEverything(page.journey);
   await page.settle();
   await page.harness.navigateByUrl('/check-in/review');
   const user = userEvent.setup();
@@ -74,6 +70,7 @@ describe('Check your answers', () => {
       'q-email',
       'q-tom-dob',
       'q-moved',
+      'q-spending',
     ]);
     expect(screen.getByRole('button', { name: /^Send to / }).getAttribute('aria-disabled')).toBe(
       'true',
@@ -90,6 +87,7 @@ describe('Check your answers', () => {
     await page.settle();
     screen.getByRole('alert');
     screen.getByText("We couldn't send your answers");
+    expect(screen.queryAllByRole('button', { name: 'Make a change' })).toHaveLength(0);
     within(screen.getByRole('region', { name: first.title })).getByText('14 March 1978');
   });
 
@@ -105,5 +103,20 @@ describe('Check your answers', () => {
     await page.settle();
     expect(page.path()).toBe(`/check-in/section/${first.id}`);
     screen.getByText('Check the year');
+  });
+
+  it('treats a refusal that names no question on screen as a failed send, so the client can try again', async () => {
+    const page = await openReview();
+    await page.send();
+    page.http.expectOne('/client/journey/submission').flush(
+      refusal('invalid_submission', {
+        fieldErrors: [{ field: 'answers.q-gone', code: 'x', message: 'Check it' }],
+      }),
+      { status: 400, statusText: 'Bad Request' },
+    );
+    await page.settle();
+    expect(page.path()).toBe('/check-in/review');
+    screen.getByText("We couldn't send your answers");
+    expect(screen.queryAllByRole('button', { name: 'Make a change' })).toHaveLength(0);
   });
 });

@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Button, Notice, QuestionRenderer, SectionAnswers } from '@retenure/ui';
 import { JourneyService } from '../../../../journey/journey.service';
@@ -15,7 +15,6 @@ export class SectionPage {
 
   private readonly router = inject(Router);
   private readonly journey = inject(JourneyService);
-  private readonly renderer = viewChild(QuestionRenderer);
 
   protected readonly complete = signal(false);
   protected readonly open = this.journey.journey;
@@ -52,7 +51,6 @@ export class SectionPage {
   }
 
   protected next() {
-    if (!this.complete()) return this.renderer()?.showErrors();
     const sections = this.open()?.sections ?? [];
     const next = sections[this.index() + 1];
     return this.router.navigateByUrl(next ? sectionPath(next.id) : reviewPath);

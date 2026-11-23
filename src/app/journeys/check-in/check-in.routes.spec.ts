@@ -1,5 +1,10 @@
 import { screen } from '@testing-library/angular';
-import { openPage, signIn, TEST_DATE_OF_BIRTH } from '../../testing/journey-harness';
+import {
+  answerEverything,
+  openPage,
+  signIn,
+  TEST_DATE_OF_BIRTH,
+} from '../../testing/journey-harness';
 import routes from './check-in.routes';
 
 const open = (url: string, hash?: string) => openPage(routes, url, hash);
@@ -87,5 +92,34 @@ describe('check-in routes', () => {
     await settle();
     expect(path()).toBe('/check-in/section/sec-changes');
     expect(journey.answers()['sec-changes']).toEqual({ 'q-moved': { kind: 'yesNo', value: true } });
+  });
+
+  describe('Check your answers', () => {
+    async function openReview() {
+      const page = await open('/start');
+      await signIn(page.http, page.journey);
+      await page.settle();
+      return page;
+    }
+
+    it('goes to the first section with a required question unanswered, so Send never posts empty answers', async () => {
+      const { harness, path, journey } = await openReview();
+      await harness.navigateByUrl('/check-in/review');
+      expect(path()).toBe('/check-in/section/sec-about-you');
+
+      journey.setAnswers('sec-about-you', {
+        'q-email': { kind: 'yesNo', value: true },
+        'q-tom-dob': { kind: 'date', value: '1978-03-14' },
+      });
+      await harness.navigateByUrl('/check-in/review');
+      expect(path()).toBe('/check-in/section/sec-changes');
+    });
+
+    it('opens once every required question is answered', async () => {
+      const { harness, path, journey } = await openReview();
+      answerEverything(journey);
+      await harness.navigateByUrl('/check-in/review');
+      expect(path()).toBe('/check-in/review');
+    });
   });
 });

@@ -13,6 +13,7 @@ import { FactCard } from './fact-card';
 })
 export class FactCardStory {
   protected readonly variants: Variants<FactCard> = {
+    changeable: 'Changeable: a summary offers Make a change unless this is false',
     variant: {
       question: 'Question: confirm what we hold, or make a change',
       summary: 'Summary: read-only rows for Check your answers',

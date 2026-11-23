@@ -52,13 +52,15 @@
     }
     <div class="actions">
       @if (variant() === 'summary') {
-        <ret-button
-          variant="link"
-          size="md"
-          [label]="makeChange()"
-          [describedBy]="headingId"
-          (pressed)="changeRequested.emit()"
-        />
+        @if (changeable()) {
+          <ret-button
+            variant="link"
+            size="md"
+            [label]="makeChange()"
+            [describedBy]="headingId"
+            (pressed)="changeRequested.emit()"
+          />
+        }
       } @else if (value()) {
         <ret-button
           variant="link"

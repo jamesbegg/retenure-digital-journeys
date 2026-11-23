@@ -7,7 +7,7 @@
     [withContact]="true"
     (back)="back()"
   >
-    @if (journey.submitProblem() === 'network') {
+    @if (failed()) {
       <ret-notice
         tone="danger"
         live="assertive"
@@ -18,6 +18,7 @@
     @for (card of cards(); track card.id) {
       <ret-fact-card
         variant="summary"
+        [changeable]="!failed()"
         [heading]="card.title"
         [facts]="card.facts"
         [confirm]="c.confirm"

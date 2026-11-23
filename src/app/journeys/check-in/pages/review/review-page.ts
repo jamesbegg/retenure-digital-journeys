@@ -34,6 +34,12 @@ export class ReviewPage {
       }))
       .filter(({ facts }) => facts.length);
   });
+  // The send did not go through, so the answers stay as they are while the client tries again.
+  protected readonly failed = computed(
+    () =>
+      this.journey.submitProblem() === 'network' ||
+      (this.journey.submitProblem() === 'invalid' && !this.journey.invalidSection()),
+  );
   protected readonly progress = computed(() => {
     const total = (this.open()?.sections.length ?? 0) + 1;
     return { label: this.open()?.journey.copy.checkAnswersTitle ?? '', step: total, total };

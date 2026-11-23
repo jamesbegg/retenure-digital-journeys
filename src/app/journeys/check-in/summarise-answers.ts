@@ -23,16 +23,12 @@ export function summariseAnswers(
 ): HeldFact[] {
   return section.blocks.flatMap(({ question }) => {
     const answer = answers[question.id];
-    const value = answer && describe(question, answer, copy);
+    const value = answer ? describe(question, answer, copy) : '';
     return value ? [{ id: question.id, label: question.prompt, value }] : [];
   });
 }
 
-function describe(
-  question: RenderableQuestion,
-  answer: AnswerValue,
-  copy: JourneyCopy,
-): string | undefined {
+function describe(question: RenderableQuestion, answer: AnswerValue, copy: JourneyCopy): string {
   switch (answer.kind) {
     case 'yesNo': {
       const yesLabel = question.kind === 'yesNo' ? question.yesLabel : undefined;
@@ -64,9 +60,15 @@ function describe(
       const summary = changes.length ? changes.join('. ') : copy.stillRight;
       return withDetail(summary, answer.note);
     }
-    default:
-      // checkbox and goals are not shown in v1, so there is nothing to summarise.
-      return undefined;
+    case 'checkbox':
+    case 'goals':
+      throw new Error(
+        `Question ${question.id} has an answer of kind ${answer.kind}, which cannot be shown`,
+      );
+    default: {
+      const unreachable: never = answer;
+      throw new Error(`Unhandled answer ${JSON.stringify(unreachable)}`);
+    }
   }
 }
 
