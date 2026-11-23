@@ -3,10 +3,11 @@
   class="dialog"
   [attr.data-placement]="placement()"
   [attr.aria-labelledby]="headingId"
+  [attr.aria-describedby]="bodyId"
   (close)="closed()"
 >
   <div class="head">
-    <h2 class="heading" [id]="headingId">{{ heading() }}</h2>
+    <h2 class="heading" tabindex="-1" [id]="headingId">{{ heading() }}</h2>
     <ret-button
       variant="ghost"
       icon="x"
@@ -15,7 +16,7 @@
       (pressed)="dialog.close()"
     />
   </div>
-  <div class="body"><ng-content /></div>
+  <div class="body" [id]="bodyId"><ng-content /></div>
   <div class="actions">
     @if (secondaryLabel(); as label) {
       <ret-button variant="secondary" [label]="label" (pressed)="secondaryPressed.emit()" />

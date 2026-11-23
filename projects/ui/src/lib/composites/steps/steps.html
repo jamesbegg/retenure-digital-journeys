@@ -13,6 +13,9 @@
         }
       </span>
       <span class="text">
+        @if (item.state === 'done' && doneLabel(); as label) {
+          <span class="ret-visually-hidden">{{ label }}</span>
+        }
         <span class="label">{{ item.label }}</span>
         @if (item.meta) {
           <span class="meta">{{ item.meta }}</span>

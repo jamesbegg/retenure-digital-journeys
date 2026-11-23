@@ -10,4 +10,6 @@ import { Icon } from '../../primitives/icon/icon';
 })
 export class Steps {
   readonly items = input.required<StepItem[]>();
+  // Read out before a finished step's label, because the tick alone says nothing to a screen reader.
+  readonly doneLabel = input<string>();
 }

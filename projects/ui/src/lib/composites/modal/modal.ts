@@ -29,6 +29,7 @@ export class Modal {
   readonly secondaryPressed = output<void>();
 
   protected readonly headingId = nextId('ret-modal-heading');
+  protected readonly bodyId = nextId('ret-modal-body');
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private opener: HTMLElement | null = null;
 
@@ -43,9 +44,8 @@ export class Modal {
       }
       this.opener = document.activeElement as HTMLElement | null;
       dialog.showModal();
-      // The safe action first when the primary one is destructive.
-      const actions = dialog.querySelectorAll<HTMLElement>('.actions button');
-      actions[this.tone() === 'danger' ? 0 : actions.length - 1].focus();
+      // On the heading, so an Enter pressed on opening fires no action and the body is read out.
+      dialog.querySelector<HTMLElement>('.heading')?.focus();
     });
   }
 

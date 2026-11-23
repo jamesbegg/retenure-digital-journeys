@@ -34,4 +34,21 @@ describe('Steps', () => {
     within(current).getByText('2');
     within(todo).getByText('3');
   });
+
+  it('puts each step in its state on the item', async () => {
+    await render(Steps, { inputs: { items } });
+    expect(screen.getAllByRole('listitem').map((s) => s.getAttribute('data-state'))).toEqual([
+      'done',
+      'current',
+      'todo',
+    ]);
+  });
+
+  it('announces a done step with the given label, and no other step', async () => {
+    await render(Steps, { inputs: { items, doneLabel: 'Done:' } });
+    const [done, current, todo] = screen.getAllByRole('listitem');
+    within(done).getByText('Done:');
+    expect(within(current).queryByText('Done:')).toBeNull();
+    expect(within(todo).queryByText('Done:')).toBeNull();
+  });
 });

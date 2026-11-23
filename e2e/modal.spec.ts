@@ -17,15 +17,15 @@ async function openModal(page: Page, tone: 'default' | 'danger') {
   return opener;
 }
 
-test('opens as a modal dialog with focus on the primary action', async ({ page }) => {
+test('opens as a modal dialog with focus on the heading', async ({ page }) => {
   await openModal(page, 'default');
   expect(await page.locator('dialog[open]').evaluate((d) => d.matches(':modal'))).toBe(true);
-  await expect(page.getByRole('button', { name: 'I need more time' })).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Do you need more time?' })).toBeFocused();
 });
 
-test('starts on the safe action when the primary action is destructive', async ({ page }) => {
+test('starts on the heading when the primary action is destructive', async ({ page }) => {
   await openModal(page, 'danger');
-  await expect(page.getByRole('button', { name: 'Leave' })).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Do you need more time?' })).toBeFocused();
 });
 
 test('keeps Tab and Shift+Tab inside the dialog', async ({ page }) => {
