@@ -1,8 +1,16 @@
-import { ageLimits, Block, Question, QuestionOption, Section, ValidatorRef } from '@retenure/ui';
+import {
+  ageLimits,
+  Block,
+  Question,
+  QuestionOption,
+  Section,
+  ValidatorRef,
+  YesNoDetail,
+} from '@retenure/ui';
 import { Reader, unique } from './reader';
 
 // v1 renders these kinds and only card blocks, with no follow-ups. Anything else fails closed.
-const v1Kinds = ['yesNo', 'radio', 'text', 'email', 'tel', 'money', 'date'] as const;
+const v1Kinds = ['yesNo', 'radio', 'text', 'money', 'date'] as const;
 
 const textRules = ['emailAddress', 'ukPhone', 'personName'] as const;
 const rulesFor = {
@@ -10,8 +18,6 @@ const rulesFor = {
   radio: [],
   text: textRules,
   multiline: textRules,
-  email: ['emailAddress'],
-  tel: ['ukPhone'],
   money: ['moneyAmount'],
   date: ['dateOfBirth'],
 } as const satisfies Record<string, readonly ValidatorRef['rule'][]>;
@@ -82,6 +88,14 @@ function option(reader: Reader): QuestionOption {
   };
 }
 
+function yesNoDetail(reader: Reader): YesNoDetail {
+  return {
+    when: reader.boolean('when'),
+    label: reader.string('label'),
+    required: reader.boolean('required'),
+  };
+}
+
 function question(reader: Reader, memberIds: ReadonlySet<string>): Question {
   if (reader.has('followUps')) reader.fail('followUps', 'not supported in v1');
   const personId = reader.optionalString('personId');
@@ -105,9 +119,14 @@ function question(reader: Reader, memberIds: ReadonlySet<string>): Question {
         kind,
         yesLabel: reader.optionalString('yesLabel'),
         noLabel: reader.optionalString('noLabel'),
+        ...(reader.has('detail') && { detail: yesNoDetail(reader.object('detail')) }),
       };
     case 'radio': {
       const options = reader.objects('options', option, 3);
+      if (options.length > 6) reader.fail('options', 'expected at most 6');
+      if (options.filter((o) => o.input).length > 1) {
+        reader.fail('options', 'at most one option may have an input');
+      }
       unique(
         options.map((o) => o.value),
         `${reader.path}.options`,
@@ -120,13 +139,6 @@ function question(reader: Reader, memberIds: ReadonlySet<string>): Question {
         kind,
         multiline: reader.boolean('multiline'),
         autocomplete: reader.optionalString('autocomplete'),
-      };
-    case 'email':
-    case 'tel':
-      return {
-        ...base,
-        kind,
-        autocomplete: reader.has('autocomplete') ? reader.oneOf('autocomplete', [kind]) : undefined,
       };
     case 'money':
       return { ...base, kind };

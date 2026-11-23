@@ -86,13 +86,10 @@ export const hartwellOpenJourney = {
             id: 'q-email',
             version: 1,
             personId: 'per-priya',
-            kind: 'email',
-            prompt: 'What is your email address?',
+            kind: 'yesNo',
+            prompt: 'Is priya.shah@example.com still the best email for you?',
             required: true,
-            autocomplete: 'email',
-            validators: [
-              { rule: 'emailAddress', message: 'Enter an email address like name@example.com' },
-            ],
+            detail: { when: false, label: 'What email should Helen use?', required: true },
           },
         },
         {
@@ -100,10 +97,10 @@ export const hartwellOpenJourney = {
           question: {
             id: 'q-phone',
             version: 1,
-            kind: 'tel',
-            prompt: 'What is the best phone number for you?',
+            kind: 'yesNo',
+            prompt: 'Is 07700 900123 still the best number to reach you?',
             required: false,
-            validators: [{ rule: 'ukPhone', message: 'Enter a UK phone number' }],
+            detail: { when: false, label: 'What number should Helen use?', required: false },
           },
         },
         {

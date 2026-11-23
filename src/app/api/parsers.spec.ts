@@ -88,11 +88,14 @@ describe('parseJourneyResponse', () => {
     }
   });
 
-  it.each(['checkbox', 'confirmFacts', 'goals', 'slider'])('rejects the kind %s in v1', (kind) => {
-    const body = clone(hartwellOpenJourney);
-    firstQuestion(body).kind = kind;
-    expect(() => parseJourneyResponse(body)).toThrow(/question\.kind: expected one of/);
-  });
+  it.each(['checkbox', 'confirmFacts', 'goals', 'email', 'tel', 'slider'])(
+    'rejects the kind %s in v1',
+    (kind) => {
+      const body = clone(hartwellOpenJourney);
+      firstQuestion(body).kind = kind;
+      expect(() => parseJourneyResponse(body)).toThrow(/question\.kind: expected one of/);
+    },
+  );
 
   it.each([
     { type: 'notice', tone: 'info', text: 'Hello' },
@@ -115,9 +118,11 @@ describe('parseJourneyResponse', () => {
     const unknown = clone(hartwellOpenJourney);
     firstQuestion(unknown).validators = [{ rule: 'postcode', message: 'Enter a postcode' }];
     const mismatched = clone(hartwellOpenJourney);
-    firstQuestion(mismatched).validators = [{ rule: 'ukPhone', message: 'Enter a phone number' }];
+    mismatched.sections[0].blocks[2].question.validators = [
+      { rule: 'ukPhone', message: 'Enter a phone number' },
+    ];
     expect(() => parseJourneyResponse(unknown)).toThrow(/rule: expected one of/);
-    expect(() => parseJourneyResponse(mismatched)).toThrow(/rule: expected one of emailAddress$/);
+    expect(() => parseJourneyResponse(mismatched)).toThrow(/rule: expected one of dateOfBirth$/);
   });
 
   it('rejects a validator missing a message or with a bound of the wrong type', () => {
@@ -130,11 +135,8 @@ describe('parseJourneyResponse', () => {
   });
 
   it('rejects an autocomplete that does not suit the kind', () => {
-    const email = clone(hartwellOpenJourney);
-    firstQuestion(email).autocomplete = 'tel';
     const date = clone(hartwellOpenJourney);
     date.sections[0].blocks[2].question.autocomplete = 'name';
-    expect(() => parseJourneyResponse(email)).toThrow(/autocomplete/);
     expect(() => parseJourneyResponse(date)).toThrow(/autocomplete/);
   });
 
@@ -189,6 +191,32 @@ describe('parseJourneyResponse', () => {
     } catch (error) {
       expect((error as Error).message).not.toContain('q-email');
     }
+  });
+
+  it('reads a YesNo detail box and rejects a malformed one', () => {
+    expect(parseJourneyResponse(hartwellOpenJourney)).toEqual(hartwellOpenJourney);
+    const when = clone(hartwellOpenJourney);
+    firstQuestion(when).detail.when = 'no';
+    const label = clone(hartwellOpenJourney);
+    delete firstQuestion(label).detail.label;
+    const required = clone(hartwellOpenJourney);
+    delete firstQuestion(required).detail.required;
+    expect(() => parseJourneyResponse(when)).toThrow(/detail\.when: expected a boolean/);
+    expect(() => parseJourneyResponse(label)).toThrow(/detail\.label/);
+    expect(() => parseJourneyResponse(required)).toThrow(/detail\.required/);
+  });
+
+  it('rejects a radio question with more than six options or two option inputs', () => {
+    const many = clone(hartwellOpenJourney);
+    spending(many).options.push(
+      ...['a', 'b', 'c', 'd'].map((value) => ({ value, label: value.toUpperCase() })),
+    );
+    const inputs = clone(hartwellOpenJourney);
+    spending(inputs).options[2].input = { label: 'How much less?', type: 'money', required: true };
+    expect(() => parseJourneyResponse(many)).toThrow(/options: expected at most 6/);
+    expect(() => parseJourneyResponse(inputs)).toThrow(
+      /options: at most one option may have an input/,
+    );
   });
 
   it('treats a null optional field as absent', () => {
@@ -336,6 +364,12 @@ describe('parseApiError', () => {
 
   it('keeps a recognised reason and its field errors', () => {
     expect(parseApiError(error)).toEqual(error);
+  });
+
+  it('keeps journey_expired', () => {
+    expect(parseApiError({ ...error, statusCode: 409, reason: 'journey_expired' })?.reason).toBe(
+      'journey_expired',
+    );
   });
 
   it.each(['brand_new', null, 7])('drops the reason %s so the status decides', (reason) => {

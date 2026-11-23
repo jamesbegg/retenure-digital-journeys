@@ -25,6 +25,12 @@ export interface QuestionOption {
   };
 }
 
+export interface YesNoDetail {
+  when: boolean;
+  label: string;
+  required: boolean;
+}
+
 export type AnswerMatch = { equals: boolean | string } | { oneOf: string[] };
 
 export interface FollowUp {
@@ -44,11 +50,10 @@ export interface QuestionBase {
 }
 
 export type Question =
-  | (QuestionBase & { kind: 'yesNo'; yesLabel?: string; noLabel?: string })
+  | (QuestionBase & { kind: 'yesNo'; yesLabel?: string; noLabel?: string; detail?: YesNoDetail })
   | (QuestionBase & { kind: 'radio'; options: QuestionOption[] })
   | (QuestionBase & { kind: 'checkbox'; options: QuestionOption[] })
   | (QuestionBase & { kind: 'text'; multiline: boolean; autocomplete?: string })
-  | (QuestionBase & { kind: 'email' | 'tel'; autocomplete?: 'email' | 'tel' })
   | (QuestionBase & { kind: 'money' })
   | (QuestionBase & { kind: 'date'; autocomplete?: 'bday' })
   | (QuestionBase & { kind: 'confirmFacts'; facts: HeldFact[] })
