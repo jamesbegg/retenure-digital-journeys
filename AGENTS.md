@@ -41,6 +41,7 @@ Repository skills live in `.claude/skills/`. `.agents/skills` is a symlink to it
 - `blast-radius`: find what a small-looking change could break elsewhere, and prove the fact it is safe because of by running code.
 - `correct`: turn a mistake agents keep repeating into an architecture, type, lint or test guard.
 - `unslop`: remove AI writing patterns from contracts, docs, PR descriptions and commit messages.
+- `form-design`: design or review any form, question, Check your answers or adviser approval summary: questions, then flow (progressive disclosure first), then look.
 
 Feature contracts live in `docs/features/`. Use `docs/agentic-memory.md` only for stable lessons that are not already clearer in the canon.
 
