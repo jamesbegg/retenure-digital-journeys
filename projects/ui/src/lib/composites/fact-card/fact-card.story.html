@@ -1,0 +1,65 @@
+<main class="ret-stack">
+  <h1>FactCard</h1>
+  <ret-fact-card
+    heading="Priya"
+    [facts]="facts"
+    confirm="Confirm"
+    makeChange="Make a change"
+    confirmed="Confirmed"
+    cancel="Cancel"
+    save="Save"
+    factNote="Anything I should know?"
+    requiredMessage="Enter a value"
+    [formControl]="unconfirmed"
+  />
+  <ret-fact-card
+    heading="Confirmed"
+    [facts]="facts"
+    confirm="Confirm"
+    makeChange="Make a change"
+    confirmed="Confirmed"
+    cancel="Cancel"
+    save="Save"
+    factNote="Anything I should know?"
+    requiredMessage="Enter a value"
+    [formControl]="confirmed"
+  />
+  <ret-fact-card
+    heading="Confirmed with a change"
+    [facts]="facts"
+    confirm="Confirm"
+    makeChange="Make a change"
+    confirmed="Confirmed"
+    cancel="Cancel"
+    save="Save"
+    factNote="Anything I should know?"
+    requiredMessage="Enter a value"
+    [formControl]="changed"
+  />
+  <ret-fact-card
+    heading="Disabled"
+    [facts]="facts"
+    confirm="Confirm"
+    makeChange="Make a change"
+    confirmed="Confirmed"
+    cancel="Cancel"
+    save="Save"
+    factNote="Anything I should know?"
+    requiredMessage="Enter a value"
+    [formControl]="disabled"
+  />
+  @for (variant of variants.variant | keyvalue: null; track variant.key) {
+    <ret-fact-card
+      [heading]="variant.value"
+      [variant]="variant.key"
+      [facts]="facts"
+      confirm="Confirm"
+      makeChange="Make a change"
+      confirmed="Confirmed"
+      cancel="Cancel"
+      save="Save"
+      factNote="Anything I should know?"
+      requiredMessage="Enter a value"
+    />
+  }
+</main>

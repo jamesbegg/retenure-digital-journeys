@@ -1,16 +1,17 @@
 import {
   ageLimits,
-  Block,
-  Question,
+  RenderableBlock,
+  RenderableQuestion,
+  RenderableSection,
+  HeldFact,
   QuestionOption,
-  Section,
   ValidatorRef,
   YesNoDetail,
 } from '@retenure/ui';
 import { Reader, unique } from './reader';
 
 // v1 renders these kinds and only card blocks, with no follow-ups. Anything else fails closed.
-const v1Kinds = ['yesNo', 'radio', 'text', 'money', 'date'] as const;
+const v1Kinds = ['yesNo', 'radio', 'text', 'money', 'date', 'confirmFacts'] as const;
 
 const textRules = ['emailAddress', 'ukPhone', 'personName'] as const;
 const rulesFor = {
@@ -20,6 +21,7 @@ const rulesFor = {
   multiline: textRules,
   money: ['moneyAmount'],
   date: ['dateOfBirth'],
+  confirmFacts: [],
 } as const satisfies Record<string, readonly ValidatorRef['rule'][]>;
 
 function validator(reader: Reader, allowed: readonly ValidatorRef['rule'][]): ValidatorRef {
@@ -96,7 +98,20 @@ function yesNoDetail(reader: Reader): YesNoDetail {
   };
 }
 
-function question(reader: Reader, memberIds: ReadonlySet<string>): Question {
+function heldFact(reader: Reader, memberIds: ReadonlySet<string>): HeldFact {
+  const personId = reader.optionalString('personId');
+  if (personId !== undefined && !memberIds.has(personId)) {
+    reader.fail('personId', 'not a household member');
+  }
+  return {
+    id: reader.string('id'),
+    label: reader.string('label'),
+    value: reader.string('value'),
+    ...(personId !== undefined && { personId }),
+  };
+}
+
+function question(reader: Reader, memberIds: ReadonlySet<string>): RenderableQuestion {
   if (reader.has('followUps')) reader.fail('followUps', 'not supported in v1');
   const personId = reader.optionalString('personId');
   if (personId !== undefined && !memberIds.has(personId)) {
@@ -142,6 +157,16 @@ function question(reader: Reader, memberIds: ReadonlySet<string>): Question {
       };
     case 'money':
       return { ...base, kind };
+    case 'confirmFacts': {
+      if (!base.required) reader.fail('required', 'must be true');
+      const facts = reader.objects('facts', (fact) => heldFact(fact, memberIds), 1);
+      if (facts.length > 8) reader.fail('facts', 'expected at most 8');
+      unique(
+        facts.map((f) => f.id),
+        `${reader.path}.facts`,
+      );
+      return { ...base, kind, facts };
+    }
     case 'date':
       return {
         ...base,
@@ -153,12 +178,12 @@ function question(reader: Reader, memberIds: ReadonlySet<string>): Question {
   }
 }
 
-function block(reader: Reader, memberIds: ReadonlySet<string>): Block {
+function block(reader: Reader, memberIds: ReadonlySet<string>): RenderableBlock {
   reader.oneOf('type', ['card']);
   return { type: 'card', question: question(reader.object('question'), memberIds) };
 }
 
-export function parseSections(reader: Reader, memberIds: ReadonlySet<string>): Section[] {
+export function parseSections(reader: Reader, memberIds: ReadonlySet<string>): RenderableSection[] {
   const sections = reader.objects(
     'sections',
     (section) => ({
@@ -174,7 +199,7 @@ export function parseSections(reader: Reader, memberIds: ReadonlySet<string>): S
     `${reader.path}.sections`,
   );
   unique(
-    sections.flatMap((s) => s.blocks.map((b) => (b.type === 'card' ? b.question.id : ''))),
+    sections.flatMap((s) => s.blocks.map((b) => b.question.id)),
     `${reader.path}.questions`,
   );
   return sections;

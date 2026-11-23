@@ -22,7 +22,7 @@ These rules come from design review of the annual check-in. They apply to every 
 - Two options use YesNo buttons.
 - Three or more options use the card RadioGroup. An option may carry its own input (for example "Yes" opens an amount field).
 - Linked questions sit on the same card: the parent question and its follow-ups together.
-- Progressive disclosure: one card at a time. The next card appears once the current one is answered. Answered cards stay editable. Answering No closes that card's follow-ups. A text field counts as answered on blur. Continue appears when every card on the screen is answered.
+- Progressive disclosure: one card at a time. The next card appears once the current one is answered. Answered cards stay editable. Answering No closes that card's follow-ups. A text field counts as answered once it is non-blank and valid; errors show on blur or Continue. Keyboard users must find the next card before they tab on. Continue appears when every card on the screen is answered.
 - Free-text answers use a plain TextField with the question as its label.
 - Questions are neutral. Never phrase a question as a sales prompt.
 

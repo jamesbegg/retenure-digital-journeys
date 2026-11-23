@@ -1,4 +1,4 @@
-import { AnswerValue, JourneyCopy, Person, Section } from '@retenure/ui';
+import { AnswerValue, JourneyCopy, Person, RenderableSection } from '@retenure/ui';
 
 export interface AdviserContact {
   name: string;
@@ -9,6 +9,8 @@ export interface AdviserContact {
 export interface ClientInfo {
   lead: Person;
   members: Person[];
+  // Becomes required once the backend samples carry it (backend U5b).
+  respondentId?: string;
 }
 
 export interface JourneyMeta {
@@ -17,7 +19,6 @@ export interface JourneyMeta {
   title: string;
   estimatedMinutes: number;
   copy: JourneyCopy;
-  ending: { doneMessage: string };
 }
 
 export interface OpenJourney {
@@ -26,7 +27,7 @@ export interface OpenJourney {
   journey: JourneyMeta;
   client: ClientInfo;
   adviser: AdviserContact;
-  sections: Section[];
+  sections: RenderableSection[];
   expiresAt: string;
 }
 

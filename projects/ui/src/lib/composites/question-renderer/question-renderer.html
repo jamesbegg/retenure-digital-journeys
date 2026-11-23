@@ -1,0 +1,95 @@
+<div class="questions">
+  @for (item of visible(); track item.question.id; let i = $index) {
+    @let q = item.question;
+    @let error = errors()[i];
+    @let variant = i === current() ? 'active' : 'default';
+    <div #card>
+      @switch (q.kind) {
+        @case ('yesNo') {
+          <ret-card [variant]="variant">
+            <ret-yes-no
+              variant="embedded"
+              [label]="q.prompt"
+              [hint]="q.hint"
+              [yesLabel]="q.yesLabel ?? 'Yes'"
+              [noLabel]="q.noLabel ?? 'No'"
+              [detail]="q.detail"
+              [error]="error.error"
+              [detailError]="error.detailError"
+              [errorPrefix]="copy().errorPrefix"
+              [formControl]="item.control"
+            />
+          </ret-card>
+        }
+        @case ('radio') {
+          <ret-card [variant]="variant">
+            <ret-radio-group
+              [label]="q.prompt"
+              [hint]="q.hint"
+              [options]="q.options"
+              [error]="error.error"
+              [optionErrors]="error.optionErrors ?? {}"
+              [errorPrefix]="copy().errorPrefix"
+              [formControl]="item.control"
+            />
+          </ret-card>
+        }
+        @case ('text') {
+          <ret-card [variant]="variant">
+            <ret-text-field
+              [label]="q.prompt"
+              [hint]="q.hint"
+              [type]="q.multiline ? 'multiline' : 'text'"
+              [autocomplete]="q.autocomplete"
+              [error]="error.error"
+              [errorPrefix]="copy().errorPrefix"
+              [formControl]="item.control"
+            />
+          </ret-card>
+        }
+        @case ('money') {
+          <ret-card [variant]="variant">
+            <ret-text-field
+              type="money"
+              [label]="q.prompt"
+              [hint]="q.hint"
+              [error]="error.error"
+              [errorPrefix]="copy().errorPrefix"
+              [formControl]="item.control"
+            />
+          </ret-card>
+        }
+        @case ('date') {
+          <ret-card [variant]="variant">
+            <ret-text-field
+              type="date"
+              [label]="q.prompt"
+              [hint]="q.hint"
+              [autocomplete]="q.autocomplete"
+              [dateLabels]="copy().dateLabels"
+              [error]="error.error"
+              [errorPrefix]="copy().errorPrefix"
+              [formControl]="item.control"
+            />
+          </ret-card>
+        }
+        @case ('confirmFacts') {
+          <ret-fact-card
+            [heading]="q.prompt"
+            [facts]="q.facts"
+            [confirm]="copy().confirm"
+            [makeChange]="copy().makeChange"
+            [confirmed]="copy().confirmed"
+            [cancel]="copy().cancel"
+            [save]="copy().save"
+            [factNote]="copy().factNote"
+            [requiredMessage]="copy().required"
+            [error]="error.error"
+            [errorPrefix]="copy().errorPrefix"
+            [formControl]="item.control"
+          />
+        }
+      }
+    </div>
+  }
+</div>
