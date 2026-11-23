@@ -2,7 +2,7 @@ import { Component, input } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { YesNoVariant } from '../../interfaces/yes-no';
+import { YesNoDetailField, YesNoValue, YesNoVariant } from '../../interfaces/yes-no';
 import { YesNo } from './yes-no';
 
 @Component({
@@ -15,6 +15,8 @@ import { YesNo } from './yes-no';
     [error]="error()"
     [yesLabel]="yesLabel()"
     [noLabel]="noLabel()"
+    [detail]="detail()"
+    [detailError]="detailError()"
     [formControl]="control"
   />`,
 })
@@ -24,7 +26,9 @@ class Host {
   readonly error = input<string>();
   readonly yesLabel = input('Yes');
   readonly noLabel = input('No');
-  readonly control = new FormControl<boolean | null>(null);
+  readonly detail = input<YesNoDetailField>();
+  readonly detailError = input<string>();
+  readonly control = new FormControl<YesNoValue | null>(null);
 }
 
 async function renderYesNo(inputs: Record<string, unknown> = {}) {
@@ -50,17 +54,17 @@ describe('YesNo', () => {
     const { control, group } = await renderYesNo();
     const user = userEvent.setup();
     await user.click(screen.getByText('Yes'));
-    expect(control.value).toBe(true);
+    expect(control.value).toEqual({ value: true });
     expect(radio('Yes').closest('label')!.querySelector('ret-icon')).not.toBeNull();
     await user.click(screen.getByText('No'));
-    expect(control.value).toBe(false);
+    expect(control.value).toEqual({ value: false });
     expect(radio('Yes').closest('label')!.querySelector('ret-icon')).toBeNull();
     expect(group.querySelectorAll('ret-icon')).toHaveLength(1);
   });
 
   it('shows a stored answer and clears on reset', async () => {
     const { control, fixture } = await renderYesNo();
-    control.setValue(false);
+    control.setValue({ value: false });
     await fixture.whenStable();
     expect(radio('No').checked).toBe(true);
     control.reset();
@@ -74,9 +78,9 @@ describe('YesNo', () => {
     await user.tab();
     expect(document.activeElement).toBe(radio('Yes'));
     await user.keyboard(' ');
-    expect(control.value).toBe(true);
+    expect(control.value).toEqual({ value: true });
     await user.keyboard('{ArrowRight}');
-    expect(control.value).toBe(false);
+    expect(control.value).toEqual({ value: false });
     expect(control.touched).toBe(false);
     await user.tab();
     expect(control.touched).toBe(true);
@@ -90,7 +94,7 @@ describe('YesNo', () => {
     });
     expect(screen.queryByRole('radio', { name: 'Yes' })).toBeNull();
     await userEvent.setup().click(screen.getByText("Something's changed"));
-    expect(control.value).toBe(false);
+    expect(control.value).toEqual({ value: false });
     fixture.componentRef.setInput('yesLabel', 'Correct');
     await fixture.whenStable();
     expect(radio('Correct').checked).toBe(false);
@@ -123,7 +127,7 @@ describe('YesNo', () => {
   it('moves the check when the stored answer changes after the client picked', async () => {
     const { control, fixture } = await renderYesNo();
     await userEvent.setup().click(screen.getByText('No'));
-    control.setValue(true);
+    control.setValue({ value: true });
     await fixture.whenStable();
     expect(radio('Yes').checked).toBe(true);
     expect(radio('Yes').closest('label')!.querySelector('ret-icon')).not.toBeNull();
@@ -142,6 +146,97 @@ describe('YesNo', () => {
     await render(YesNo, { inputs: { label: 'Any care needs?', icon: 'info' } });
     const legend = screen.getByRole('group', { name: 'Any care needs?' }).querySelector('legend')!;
     expect(legend.querySelector('ret-icon')).not.toBeNull();
+  });
+
+  it('reveals a detail box on the chosen answer and sends its text', async () => {
+    const { control } = await renderYesNo({
+      detail: { when: false, label: 'What is Sarah doing instead?' },
+    });
+    const user = userEvent.setup();
+    await user.click(screen.getByText('Yes'));
+    expect(screen.queryByRole('textbox')).toBeNull();
+    await user.click(screen.getByText('No'));
+    const box = screen.getByRole('textbox', { name: 'What is Sarah doing instead?' });
+    expect(document.activeElement).not.toBe(box);
+    await user.type(box, 'An apprenticeship');
+    expect(control.value).toEqual({ value: false, detail: 'An apprenticeship' });
+  });
+
+  it('tells a screen reader that a box has appeared for the answer', async () => {
+    await renderYesNo({ detail: { when: false, label: 'What is Sarah doing instead?' } });
+    await userEvent.setup().click(screen.getByText('No'));
+    const ids = radio('No').getAttribute('aria-describedby')!.split(' ');
+    expect(ids.map((id) => document.getElementById(id)?.textContent?.trim())).toContain(
+      'What is Sarah doing instead?',
+    );
+    expect(radio('Yes').hasAttribute('aria-describedby')).toBe(false);
+  });
+
+  it('sends no detail while the box is hidden, but keeps the draft for a mis-tap', async () => {
+    const { control } = await renderYesNo({ detail: { when: false, label: 'Tell us more' } });
+    const user = userEvent.setup();
+    await user.click(screen.getByText('No'));
+    await user.type(screen.getByRole('textbox', { name: 'Tell us more' }), 'Moved to Leeds');
+    await user.click(screen.getByText('Yes'));
+    expect(control.value).toEqual({ value: true });
+    expect(screen.queryByRole('textbox')).toBeNull();
+    await user.click(screen.getByText('No'));
+    expect(
+      (screen.getByRole('textbox', { name: 'Tell us more' }) as HTMLTextAreaElement).value,
+    ).toBe('Moved to Leeds');
+    expect(control.value).toEqual({ value: false, detail: 'Moved to Leeds' });
+  });
+
+  it('never carries a stored detail over to the other answer', async () => {
+    const { control, fixture } = await renderYesNo({
+      detail: { when: false, label: 'Tell us more' },
+    });
+    control.setValue({ value: true, detail: 'old' });
+    await fixture.whenStable();
+    await userEvent.setup().click(screen.getByText('No'));
+    expect(
+      (screen.getByRole('textbox', { name: 'Tell us more' }) as HTMLTextAreaElement).value,
+    ).toBe('');
+    expect(control.value).toEqual({ value: false });
+  });
+
+  it('clears the box on reset and disables it with the control', async () => {
+    const { control, fixture } = await renderYesNo({
+      detail: { when: false, label: 'Tell us more' },
+    });
+    const user = userEvent.setup();
+    await user.click(screen.getByText('No'));
+    await user.type(screen.getByRole('textbox', { name: 'Tell us more' }), 'Moved');
+    control.disable();
+    await fixture.whenStable();
+    expect(
+      (screen.getByRole('textbox', { name: 'Tell us more' }) as HTMLTextAreaElement).matches(
+        ':disabled',
+      ),
+    ).toBe(true);
+    control.reset();
+    control.enable();
+    await fixture.whenStable();
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(control.value).toBeNull();
+  });
+
+  it('shows a stored detail and an error on the box', async () => {
+    const { control, fixture } = await renderYesNo({
+      detail: { when: true, label: 'Who looks after you?' },
+      detailError: 'Tell us who helps you',
+    });
+    control.setValue({ value: true, detail: 'My daughter' });
+    await fixture.whenStable();
+    const box = screen.getByRole('textbox', {
+      name: 'Who looks after you?',
+    }) as HTMLTextAreaElement;
+    expect(box.value).toBe('My daughter');
+    expect(box.getAttribute('aria-invalid')).toBe('true');
+    const ids = box.getAttribute('aria-describedby')!.split(' ');
+    expect(
+      ids.map((id) => document.getElementById(id)?.textContent?.replace(/\s+/g, ' ').trim()),
+    ).toContain('Error: Tell us who helps you');
   });
 
   it('gives each pair its own radio name', async () => {

@@ -78,7 +78,7 @@ No code exists yet. Patterns come from the canon: standalone components, `input(
   The card surface is a `surface` mixin in `tokens/`, used by Card and standalone YesNo. It is not a global class, so a screen cannot rebuild a card.
 - Form controls implement `ControlValueAccessor`:
   - TextField: value is a `string`, and `type` is fixed for a field's lifetime. Money is digits with no separators, rounded to pence on blur; text it cannot read passes through as typed so the screen can show an error. A date is a real `YYYY-MM-DD` once complete, otherwise `''`, and the control also implements `Validator`, returning `{ incompleteDate: { missing: ('day' | 'month' | 'year')[] } }` or `{ invalidDate: true }`. Autocomplete is set by the caller (`email`, `tel`, `bday` for a date), never assumed, because a partner's details must not autofill with the client's own.
-  - YesNo: `boolean | null`.
+  - YesNo: `{ value: boolean; detail?: string } | null`. With a `detail` input (`{ when, label }`), choosing that answer reveals a multi-line TextField; the detail is sent only while the box shows (the typed text stays as a draft, so a mis-tap does not lose it), a stored detail loads only under its own answer, and an empty detail is left out. Like TextField's `type`, `detail` is fixed for the control's lifetime.
   - RadioGroup: `{ value: string; input?: string } | null`.
 - JourneyShell: `layout: 'default' | 'with-steps' | 'centred'`, `state: 'loading' | 'ready' | 'error' | 'blocked'`. The shell holds no branding switch: the firm's theme and details are applied once at start-up from the backend, and a page that could not load them (the generic error page) simply projects no firm header or contact. Empty header and contact landmarks are not rendered.
 - ActionBar takes `actions: ActionBarActions`, a union on `kind`:
@@ -176,6 +176,7 @@ Nothing is live. The package is consumed through a `tsconfig` path in this repo.
 - **Story layout is global.** `.ret-stack` and `.ret-cluster` in `projects/ui/src/styles/_utilities.scss` replace a stylesheet per story; the gallery frame gives the padding. Journey templates still cannot use `ret-*` classes.
 
 - **Shared validators, added to #49 at the user's request.** `utils/validators.ts`: `emailAddress`, `ukPhone`, `personName`, `dateOfBirth(minAge, maxAge)` and `moneyAmount(min, max)`. Light-touch checks that catch slips (a name in the email field, 1196 for 1996), not strict formats. Empty values pass so `Validators.required` decides; error copy comes from each question definition.
+- **YesNo detail box (2026-11-22, user request via the backend lane).** YesNo's value moves from `boolean | null` to `{ value: boolean; detail?: string } | null`, matching RadioGroup's `{ value, input? }` and the wire answer `{ kind: 'yesNo', value, detail? }`. Nothing was live, so the story and spec moved in the same change. `detailError` puts an error on the box, as RadioGroup's `optionErrors` does.
 
 ### Unresolved and blocking
 
