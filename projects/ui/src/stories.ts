@@ -5,6 +5,12 @@ export const stories: Record<string, () => Promise<Type<unknown>>> = {
     import('./lib/composites/action-bar/action-bar.story').then((m) => m.ActionBarStory),
   button: () => import('./lib/primitives/button/button.story').then((m) => m.ButtonStory),
   card: () => import('./lib/composites/card/card.story').then((m) => m.CardStory),
+  'fact-card': () =>
+    import('./lib/composites/fact-card/fact-card.story').then((m) => m.FactCardStory),
+  'question-renderer': () =>
+    import('./lib/composites/question-renderer/question-renderer.story').then(
+      (m) => m.QuestionRendererStory,
+    ),
   'field-messages': () =>
     import('./lib/primitives/field-messages/field-messages.story').then(
       (m) => m.FieldMessagesStory,

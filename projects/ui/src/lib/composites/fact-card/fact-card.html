@@ -1,0 +1,69 @@
+<section class="card" [attr.aria-labelledby]="headingId">
+  <div class="title">
+    <h2 class="heading" tabindex="-1" [id]="headingId">{{ heading() }}</h2>
+    <span class="status" role="status">
+      @if (variant() === 'question' && value() && !changing()) {
+        <ret-badge [label]="confirmed()" tone="success" icon="check" size="sm" />
+      }
+    </span>
+  </div>
+  @if (changing()) {
+    <div class="fields">
+      @for (field of fields(); track field.fact.id) {
+        <ret-text-field
+          [label]="field.fact.label"
+          [formControl]="field.control"
+          [error]="blank(field.control) ? requiredMessage() : undefined"
+          [errorPrefix]="errorPrefix()"
+        />
+      }
+      <ret-text-field type="multiline" [label]="factNote()" [formControl]="note" />
+    </div>
+    <div class="actions">
+      <ret-button variant="secondary" [label]="cancel()" (pressed)="cancelChange()" />
+      <ret-button [label]="save()" (pressed)="saveChange()" />
+    </div>
+  } @else {
+    <dl class="rows">
+      @for (row of rows(); track row.id) {
+        <div class="row">
+          <dt class="label">{{ row.label }}</dt>
+          <dd class="value">{{ row.value }}</dd>
+        </div>
+      }
+    </dl>
+    <div class="actions">
+      @if (variant() === 'summary') {
+        <ret-button
+          variant="link"
+          size="md"
+          [label]="makeChange()"
+          [describedBy]="headingId"
+          (pressed)="changeRequested.emit()"
+        />
+      } @else if (value()) {
+        <ret-button
+          variant="link"
+          size="md"
+          [label]="makeChange()"
+          [describedBy]="headingId"
+          [disabled]="disabled()"
+          (pressed)="startChange()"
+        />
+      } @else {
+        <ret-button
+          variant="secondary"
+          [label]="makeChange()"
+          [disabled]="disabled()"
+          (pressed)="startChange()"
+        />
+        <ret-button
+          icon="check"
+          [label]="confirm()"
+          [disabled]="disabled()"
+          (pressed)="confirmAll()"
+        />
+      }
+    </div>
+  }
+</section>

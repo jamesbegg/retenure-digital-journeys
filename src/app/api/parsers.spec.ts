@@ -88,14 +88,11 @@ describe('parseJourneyResponse', () => {
     }
   });
 
-  it.each(['checkbox', 'goals', 'email', 'tel', 'slider'])(
-    'rejects the kind %s in v1',
-    (kind) => {
-      const body = clone(hartwellOpenJourney);
-      firstQuestion(body).kind = kind;
-      expect(() => parseJourneyResponse(body)).toThrow(/question\.kind: expected one of/);
-    },
-  );
+  it.each(['checkbox', 'goals', 'email', 'tel', 'slider'])('rejects the kind %s in v1', (kind) => {
+    const body = clone(hartwellOpenJourney);
+    firstQuestion(body).kind = kind;
+    expect(() => parseJourneyResponse(body)).toThrow(/question\.kind: expected one of/);
+  });
 
   describe('confirmFacts', () => {
     const facts = (count: number) =>
