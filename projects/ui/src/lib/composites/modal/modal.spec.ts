@@ -148,21 +148,6 @@ describe('Modal', () => {
     screen.getByRole('dialog');
   });
 
-  it.each(['centre', 'sheet'] as const)(
-    'reflects the %s placement on the dialog',
-    async (placement) => {
-      const { set } = await renderModal(`placement="${placement}" [(open)]="open"`);
-      await set(true);
-      expect(dialog().getAttribute('data-placement')).toBe(placement);
-    },
-  );
-
-  it('is centred unless asked otherwise', async () => {
-    const { set } = await renderModal('[(open)]="open"');
-    await set(true);
-    expect(dialog().getAttribute('data-placement')).toBe('centre');
-  });
-
   it('describes the dialog by its body, so the body is read out on open', async () => {
     const { set } = await renderModal('[(open)]="open"');
     await set(true);

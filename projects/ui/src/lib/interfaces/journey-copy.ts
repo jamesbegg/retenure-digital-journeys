@@ -23,7 +23,6 @@ export interface JourneyCopy {
   save: string;
   factNote: string;
   contactLine: string;
-  urgentLink: string;
   sendTo: string;
   doneTitle: string;
   doneBody: string;

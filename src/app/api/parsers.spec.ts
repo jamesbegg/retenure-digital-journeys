@@ -302,7 +302,6 @@ describe('parseJourneyResponse', () => {
     'save',
     'factNote',
     'contactLine',
-    'urgentLink',
     'sendTo',
     'doneTitle',
     'doneBody',

@@ -34,7 +34,6 @@ const copy: JourneyCopy = {
   save: 'Save',
   factNote: 'Anything I should know?',
   contactLine: "Rather talk it through? Email me and we'll arrange a call.",
-  urgentLink: 'Something urgent or worrying you?',
   sendTo: 'Send to {adviser}',
   doneTitle: "Thank you, {name}. We've received your answers.",
   doneBody: '{adviser} will be in touch.',

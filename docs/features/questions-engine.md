@@ -380,7 +380,6 @@ interface JourneyCopy {        // every UI string the components take as input
   save: string;
   factNote: string;            // "Anything I should know?"
   contactLine: string;         // the adviser line under every screen
-  urgentLink: string;
   sendTo: string;              // "Send to {adviser}"
   doneTitle: string;
   doneBody: string;

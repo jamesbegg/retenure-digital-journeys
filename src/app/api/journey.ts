@@ -43,7 +43,6 @@ function copy(reader: Reader): JourneyCopy {
     save: reader.string('save'),
     factNote: reader.string('factNote'),
     contactLine: reader.string('contactLine'),
-    urgentLink: reader.string('urgentLink'),
     sendTo: reader.string('sendTo'),
     doneTitle: reader.string('doneTitle'),
     doneBody: reader.string('doneBody'),

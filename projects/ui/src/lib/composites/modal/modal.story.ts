@@ -15,10 +15,6 @@ export class ModalStory {
       default: 'Default: a question with a primary action',
       danger: 'Danger: the primary action is destructive, focus starts on the safe one',
     },
-    placement: {
-      centre: 'Centre: a dialog in the middle of the page',
-      sheet: 'Sheet: rises from the bottom edge on a phone, centred on a wider screen',
-    },
     open: 'Open: shown as a native modal dialog',
   };
 
