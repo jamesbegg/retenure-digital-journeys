@@ -42,6 +42,7 @@ const copy: JourneyCopy = {
   emailAdviser: 'Email',
   adviserLabel: 'Adviser',
   progressValue: 'Step',
+  moneyUnreadable: 'Enter an amount in pounds, like 250 or 250.50',
 };
 
 const base = { version: 1, required: true } as const;
@@ -161,6 +162,12 @@ async function renderSection(s: Section, answers: SectionAnswers = {}) {
 
 const last = (host: Host) => host.completes.at(-1);
 
+const description = (el: HTMLElement) =>
+  (el.getAttribute('aria-describedby') ?? '')
+    .split(' ')
+    .filter(Boolean)
+    .map((id) => document.getElementById(id)?.textContent?.trim());
+
 describe('QuestionRenderer', () => {
   describe('progressive disclosure', () => {
     it('shows only the first question until it is answered', async () => {
@@ -191,14 +198,80 @@ describe('QuestionRenderer', () => {
       expect(scrollIntoView).not.toHaveBeenCalled();
     });
 
-    it('counts a text answer only on blur', async () => {
+    it('counts a text answer once it is non-blank and valid, so the next card exists before blur', async () => {
       const { user, settle } = await renderSection(section(email, pay));
-      await user.type(screen.getByRole('textbox', { name: 'What is your email?' }), 'a@b.test');
+      const field = screen.getByRole('textbox', { name: 'What is your email?' });
+      await user.type(field, 'a@b');
       await settle();
       expect(screen.queryByText('What is your yearly pay?')).toBeNull();
-      await user.tab();
+      await user.type(field, '.test');
       await settle();
       screen.getByRole('textbox', { name: 'What is your yearly pay?' });
+    });
+
+    it('lands a tab out of a money field on the next card first control', async () => {
+      const { user, settle } = await renderSection(section(pay, email));
+      await user.type(screen.getByRole('textbox', { name: 'What is your yearly pay?' }), '40000');
+      await settle();
+      await user.tab();
+      expect(document.activeElement).toBe(
+        screen.getByRole('textbox', { name: 'What is your email?' }),
+      );
+    });
+
+    it('lands a tab out of the date year on the next card', async () => {
+      const { user, settle } = await renderSection(section(purchase, email));
+      await user.click(screen.getByRole('textbox', { name: 'Year' }));
+      await user.paste('14/03/1996');
+      await settle();
+      await user.tab();
+      expect(document.activeElement).toBe(
+        screen.getByRole('textbox', { name: 'What is your email?' }),
+      );
+    });
+
+    it('reveals a required radio option input card as soon as the input has text', async () => {
+      const { user, settle } = await renderSection(section(helper, email));
+      await user.click(screen.getByRole('radio', { name: 'A relative' }));
+      await settle();
+      expect(screen.queryByText('What is your email?')).toBeNull();
+      await user.type(screen.getByRole('textbox', { name: 'Who is that?' }), 'A');
+      await settle();
+      screen.getByRole('textbox', { name: 'What is your email?' });
+    });
+
+    it('does not flip an optional text to unanswered while typing', async () => {
+      const { user, settle, host } = await renderSection(section(extra));
+      await settle();
+      host.completes.length = 0;
+      await user.type(screen.getByRole('textbox', { name: 'Anything else?' }), 'Some words');
+      await settle();
+      expect(host.completes.every(Boolean)).toBe(true);
+      expect(host.answers()['extra']).toEqual({ kind: 'text', value: 'Some words' });
+    });
+
+    it('reveals three questions in order', async () => {
+      const { user, settle } = await renderSection(section(working, pay, email));
+      const shown = () => screen.queryAllByRole('textbox').length;
+      expect(shown()).toBe(0);
+      await user.click(screen.getByRole('radio', { name: 'Yes' }));
+      await settle();
+      screen.getByRole('textbox', { name: 'What is your yearly pay?' });
+      expect(screen.queryByText('What is your email?')).toBeNull();
+      await user.type(screen.getByRole('textbox', { name: 'What is your yearly pay?' }), '5');
+      await settle();
+      screen.getByRole('textbox', { name: 'What is your email?' });
+    });
+
+    it('scrolls the newly revealed card, not an earlier one', async () => {
+      const { user, settle } = await renderSection(section(working, pay));
+      await user.click(screen.getByRole('radio', { name: 'Yes' }));
+      await settle();
+      const target = scrollIntoView.mock.contexts[0] as HTMLElement;
+      expect(
+        target.contains(screen.getByRole('textbox', { name: 'What is your yearly pay?' })),
+      ).toBe(true);
+      expect(target.contains(screen.getByRole('radio', { name: 'Yes' }))).toBe(false);
     });
 
     it('keeps answered questions visible and editable', async () => {
@@ -306,12 +379,90 @@ describe('QuestionRenderer', () => {
       screen.getByText('Enter pay as numbers');
     });
 
-    it('falls back to the required message for unreadable money with no configured text', async () => {
+    it('uses the moneyUnreadable copy for unreadable money with no configured text', async () => {
       const { user, settle } = await renderSection(section({ ...pay, validators: undefined }));
       await user.type(screen.getByRole('textbox', { name: 'What is your yearly pay?' }), 'lots');
       await user.tab();
       await settle();
-      screen.getByText('Answer this question to continue');
+      screen.getByText('Enter an amount in pounds, like 250 or 250.50');
+      expect(screen.queryByText('Answer this question to continue')).toBeNull();
+    });
+
+    it('uses the moneyUnreadable copy inside a money option input', async () => {
+      const money: Question = {
+        ...helper,
+        options: [
+          helper.kind === 'radio' ? helper.options[0] : { value: 'a', label: 'Priya' },
+          { value: 'b', label: 'Dev' },
+          {
+            value: 'c',
+            label: 'Something else',
+            input: { label: 'How much?', type: 'money', required: true },
+          },
+        ],
+      };
+      const { user, settle } = await renderSection(section(money));
+      await user.click(screen.getByRole('radio', { name: 'Something else' }));
+      await user.type(screen.getByRole('textbox', { name: 'How much?' }), 'lots');
+      await user.tab();
+      await settle();
+      const field = screen.getByRole('textbox', { name: 'How much?' });
+      expect(description(field)).toContain('Error: Enter an amount in pounds, like 250 or 250.50');
+    });
+
+    it('shows an option input validator message inside that option own field', async () => {
+      const checked: Question = {
+        ...helper,
+        options: [
+          { value: 'a', label: 'Priya' },
+          { value: 'b', label: 'Dev' },
+          {
+            value: 'c',
+            label: 'Someone else',
+            input: {
+              label: 'Their email?',
+              type: 'text',
+              required: true,
+              validators: [{ rule: 'emailAddress', message: 'Enter a real email address' }],
+            },
+          },
+        ],
+      };
+      const { user, settle } = await renderSection(section(checked));
+      await user.click(screen.getByRole('radio', { name: 'Someone else' }));
+      await user.type(screen.getByRole('textbox', { name: 'Their email?' }), 'nope');
+      await user.tab();
+      await settle();
+      const field = screen.getByRole('textbox', { name: 'Their email?' });
+      expect(field.getAttribute('aria-invalid')).toBe('true');
+      expect(description(field)).toContain('Error: Enter a real email address');
+    });
+
+    it('shows copy.required on an unconfirmed FactCard when errors are asked for', async () => {
+      const { host, settle } = await renderSection(section(goal));
+      host.renderer().showErrors();
+      await settle();
+      const region = screen.getByRole('region', { name: 'Is this still your goal?' });
+      within(region).getByText('Answer this question to continue');
+      expect(region.getAttribute('aria-describedby')).toBeTruthy();
+    });
+
+    it('moves focus to the first invalid field when errors are asked for', async () => {
+      const { host, settle } = await renderSection(section(email, pay));
+      host.renderer().showErrors();
+      await settle();
+      expect(document.activeElement).toBe(
+        screen.getByRole('textbox', { name: 'What is your email?' }),
+      );
+    });
+
+    it('moves focus to the FactCard heading when that is what is missing', async () => {
+      const { host, settle } = await renderSection(section(goal));
+      host.renderer().showErrors();
+      await settle();
+      expect(document.activeElement).toBe(
+        screen.getByRole('heading', { name: 'Is this still your goal?' }),
+      );
     });
   });
 
@@ -507,6 +658,155 @@ describe('QuestionRenderer', () => {
       expect(screen.queryByText('Are you still working?')).toBeNull();
       expect(screen.queryByText('What is your yearly pay?')).toBeNull();
       expect(last(host)).toBe(false);
+    });
+
+    it('shows two cards for a partial seed', async () => {
+      await renderSection(section(working, pay, email), {
+        working: { kind: 'yesNo', value: true },
+      });
+      screen.getByRole('textbox', { name: 'What is your yearly pay?' });
+      expect(screen.queryByText('What is your email?')).toBeNull();
+    });
+
+    it('ignores a seeded answer of the wrong kind', async () => {
+      const { host, settle } = await renderSection(section(pay), {
+        pay: { kind: 'text', value: 'lots' },
+      });
+      await settle();
+      expect(screen.getByRole('textbox', { name: 'What is your yearly pay?' })).toHaveProperty(
+        'value',
+        '',
+      );
+      expect(last(host)).toBe(false);
+    });
+
+    it('shows answers the parent writes from outside, such as after re-verifying', async () => {
+      const { host, settle } = await renderSection(section(working, pay));
+      host.answers.set({
+        working: { kind: 'yesNo', value: true },
+        pay: { kind: 'money', value: '40000' },
+      });
+      await settle();
+      expect(screen.getByRole('textbox', { name: 'What is your yearly pay?' })).toHaveProperty(
+        'value',
+        '40,000',
+      );
+      expect(screen.getByRole('radio', { name: 'Yes' })).toHaveProperty('checked', true);
+      expect(last(host)).toBe(true);
+    });
+
+    it('does not rebuild the fields when the parent echoes its own answers back', async () => {
+      const { host, user, settle } = await renderSection(section(email));
+      const field = screen.getByRole('textbox', { name: 'What is your email?' });
+      await user.type(field, 'a@b.test');
+      await settle();
+      host.answers.set({ ...host.answers() });
+      await settle();
+      expect(screen.getByRole('textbox', { name: 'What is your email?' })).toBe(field);
+    });
+
+    it('trims text answers', async () => {
+      const { user, settle, host } = await renderSection(section(email));
+      await user.type(screen.getByRole('textbox', { name: 'What is your email?' }), ' a@b.test ');
+      await settle();
+      expect(host.answers()['email']).toEqual({ kind: 'text', value: 'a@b.test' });
+    });
+  });
+
+  describe('completion rules', () => {
+    const optional = (q: Question): Question => ({ ...q, required: false });
+
+    it('renders multiline text as a textarea', async () => {
+      await renderSection(section(extra));
+      expect(screen.getByRole('textbox', { name: 'Anything else?' }).tagName).toBe('TEXTAREA');
+    });
+
+    it.each([
+      ['an unanswered confirmFacts', goal],
+      ['a blank required money', pay],
+      ['a blank required date', purchase],
+    ])('is incomplete with %s', async (_, question) => {
+      const { host, settle } = await renderSection(section(question));
+      await settle();
+      expect(last(host)).toBe(false);
+    });
+
+    it('is complete for No with an optional detail left blank', async () => {
+      const q: Question = {
+        ...working,
+        detail: { when: false, label: 'What are you doing now?', required: false },
+      };
+      const { user, settle, host } = await renderSection(section(q));
+      await user.click(screen.getByRole('radio', { name: 'No' }));
+      await settle();
+      expect(last(host)).toBe(true);
+      expect(host.answers()['working']).toEqual({ kind: 'yesNo', value: false });
+    });
+
+    it('omits an optional whitespace-only answer and is complete', async () => {
+      const { user, settle, host } = await renderSection(section(extra));
+      await user.type(screen.getByRole('textbox', { name: 'Anything else?' }), '   ');
+      await user.tab();
+      await settle();
+      expect(host.answers()).toEqual({});
+      expect(last(host)).toBe(true);
+    });
+
+    it('is blocked by an invalid optional email', async () => {
+      const { user, settle, host } = await renderSection(section(optional(email)));
+      await user.type(screen.getByRole('textbox', { name: 'What is your email?' }), 'nope');
+      await user.tab();
+      await settle();
+      expect(last(host)).toBe(false);
+    });
+
+    it('is complete for an optional radio option input left blank', async () => {
+      const q: Question = {
+        ...helper,
+        options: [
+          { value: 'a', label: 'Priya' },
+          { value: 'b', label: 'Dev' },
+          {
+            value: 'c',
+            label: 'A relative',
+            input: { label: 'Who is that?', type: 'text', required: false },
+          },
+        ],
+      };
+      const { user, settle, host } = await renderSection(section(q));
+      await user.click(screen.getByRole('radio', { name: 'A relative' }));
+      await settle();
+      expect(last(host)).toBe(true);
+      expect(host.answers()['helper']).toEqual({ kind: 'radio', value: 'c' });
+    });
+  });
+
+  describe('editing a confirmed FactCard', () => {
+    it('takes the card out of complete while editing, and Cancel restores it', async () => {
+      const { user, settle, host } = await renderSection(section(goal));
+      await user.click(screen.getByRole('button', { name: 'Confirm' }));
+      await settle();
+      expect(last(host)).toBe(true);
+      await user.click(screen.getByRole('button', { name: 'Make a change' }));
+      await settle();
+      expect(last(host)).toBe(false);
+      expect(host.answers()).toEqual({});
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      await settle();
+      expect(last(host)).toBe(true);
+      expect(host.answers()['goal']).toEqual({ kind: 'confirmFacts', changed: [] });
+    });
+
+    it('is complete again once the change is saved', async () => {
+      const { user, settle, host } = await renderSection(section(goal));
+      await user.click(screen.getByRole('button', { name: 'Confirm' }));
+      await user.click(screen.getByRole('button', { name: 'Make a change' }));
+      const fact = screen.getByRole('textbox', { name: 'Retire at 60' });
+      await user.type(fact, ' or 62');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await settle();
+      expect(last(host)).toBe(true);
+      expect(host.answers()['goal']).toMatchObject({ kind: 'confirmFacts' });
     });
   });
 });

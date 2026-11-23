@@ -1,6 +1,6 @@
 import { FormControl, ValidationErrors } from '@angular/forms';
-import { FactCardValue } from './answer';
-import { Question } from './question';
+import { FactCardValue, SectionAnswers } from './answer';
+import { Question, Section } from './question';
 import { RadioGroupValue } from './radio-group';
 import { YesNoValue } from './yes-no';
 
@@ -14,6 +14,11 @@ export type QuestionControlValue = YesNoValue | RadioGroupValue | FactCardValue 
 export interface QuestionItem {
   question: RenderedQuestion;
   control: FormControl<QuestionControlValue>;
+}
+
+export interface RendererSource {
+  section: Section;
+  answers: SectionAnswers;
 }
 
 export interface ShownQuestions {

@@ -123,27 +123,9 @@ export function buildItem(question: RenderedQuestion, answer?: AnswerValue): Que
   return { question, control };
 }
 
-// Typed text, a required detail or a required option input waits for the client to leave it.
-function needsBlur(q: RenderedQuestion, value: QuestionControlValue): boolean {
-  switch (q.kind) {
-    case 'text':
-    case 'money':
-    case 'date':
-      return true;
-    case 'yesNo':
-      return !!q.detail?.required && (value as YesNoValue).value === q.detail.when;
-    case 'radio':
-      return !!q.options.find((o) => o.value === (value as RadioGroupValue).value)?.input?.required;
-    case 'confirmFacts':
-      return false;
-  }
-}
-
-export function isAnswered({ question, control }: QuestionItem): boolean {
-  if (control.invalid) return false;
-  if (blank(control.value)) return !question.required;
-  return !needsBlur(question, control.value) || control.touched;
-}
+// A question counts as answered once it is valid: non-blank when required, so the next card
+// exists before the client tabs on. Errors are the renderer's business, shown on blur.
+export const isAnswered = ({ control }: QuestionItem): boolean => control.valid;
 
 export function toAnswer({ question: q, control }: QuestionItem): AnswerValue | undefined {
   const value = control.value;
@@ -191,7 +173,7 @@ export function errorMessage(
         return ref.message;
     }
   }
-  return copy.required;
+  return errors['moneyAmount'] ? copy.moneyUnreadable : copy.required;
 }
 
 export function questionError(

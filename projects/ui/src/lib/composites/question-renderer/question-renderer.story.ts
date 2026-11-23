@@ -41,6 +41,7 @@ const copy: JourneyCopy = {
   emailAdviser: 'Email {adviser}',
   adviserLabel: 'Your adviser',
   progressValue: 'Step {step} of {total}',
+  moneyUnreadable: 'Enter an amount in pounds, like 250 or 250.50',
 };
 
 const base = { version: 1, required: true } as const;

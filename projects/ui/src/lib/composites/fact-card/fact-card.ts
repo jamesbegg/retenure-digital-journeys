@@ -15,13 +15,14 @@ import { FactCardField, FactCardVariant } from '../../interfaces/fact-card';
 import { HeldFact } from '../../interfaces/question';
 import { Badge } from '../../primitives/badge/badge';
 import { Button } from '../../primitives/button/button';
+import { FieldMessages } from '../../primitives/field-messages/field-messages';
 import { TextField } from '../../primitives/text-field/text-field';
 import { provideValueAccessor } from '../../utils/forms';
 import { nextId } from '../../utils/id';
 
 @Component({
   selector: 'ret-fact-card',
-  imports: [Badge, Button, TextField, ReactiveFormsModule],
+  imports: [Badge, Button, FieldMessages, TextField, ReactiveFormsModule],
   templateUrl: './fact-card.html',
   styleUrl: './fact-card.scss',
   providers: [provideValueAccessor(() => FactCard)],
@@ -38,6 +39,7 @@ export class FactCard implements ControlValueAccessor {
   readonly save = input.required<string>();
   readonly factNote = input.required<string>();
   readonly requiredMessage = input.required<string>();
+  readonly error = input<string>();
   readonly errorPrefix = input('Error:');
   readonly changeRequested = output<void>();
 
@@ -94,11 +96,14 @@ export class FactCard implements ControlValueAccessor {
     this.note.setValue(this.value()?.note ?? '');
     this.attempted.set(false);
     this.changing.set(true);
+    // A card being edited is not answered until it is saved.
+    if (this.value()) this.onChange(null);
     this.focus('input, textarea');
   }
 
   protected cancelChange() {
     this.changing.set(false);
+    this.onChange(this.value());
     this.focus('.heading');
   }
 

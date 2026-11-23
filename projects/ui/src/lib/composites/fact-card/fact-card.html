@@ -1,4 +1,8 @@
-<section class="card" [attr.aria-labelledby]="headingId">
+<section
+  class="card"
+  [attr.aria-labelledby]="headingId"
+  [attr.aria-describedby]="error() && !changing() ? headingId + '-error' : null"
+>
   <div class="title">
     <h2 class="heading" tabindex="-1" [id]="headingId">{{ heading() }}</h2>
     <span class="status" role="status">
@@ -32,6 +36,9 @@
         </div>
       }
     </dl>
+    @if (error(); as message) {
+      <ret-field-messages [fieldId]="headingId" [error]="message" [errorPrefix]="errorPrefix()" />
+    }
     <div class="actions">
       @if (variant() === 'summary') {
         <ret-button

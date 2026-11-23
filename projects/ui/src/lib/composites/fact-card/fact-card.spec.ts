@@ -143,6 +143,25 @@ describe('FactCard (question)', () => {
     within(card()).getByText('Confirmed');
   });
 
+  it('empties the control while a confirmed card is edited and restores it on Cancel', async () => {
+    const confirmed = { changed: [{ factId: 'f1', newValue: 'Nurse' }], note: 'Moved' };
+    const { control, user } = await renderCard(confirmed);
+    await user.click(button('Make a change'));
+    expect(control.value).toBeNull();
+    await user.click(button('Cancel'));
+    expect(control.value).toEqual(confirmed);
+    within(card()).getByText('Confirmed');
+  });
+
+  it('shows an error message tied to the card', async () => {
+    await renderCard(null, 'error="Answer this question to continue"');
+    within(card()).getByText('Answer this question to continue');
+    const ids = card().getAttribute('aria-describedby')!.split(' ');
+    expect(ids.map((id) => document.getElementById(id)?.textContent)).toContain(
+      'Error: Answer this question to continue',
+    );
+  });
+
   it('follows the form control when it is reset', async () => {
     const { control, fixture } = await renderCard({ changed: [] });
     control.setValue(null);

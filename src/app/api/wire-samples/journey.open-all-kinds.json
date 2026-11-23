@@ -47,9 +47,6 @@
       "alreadyCompletedBody": "It was sent to {adviser} on {date}.",
       "notYou": "Wasn't you? If you didn't send these answers, contact {adviser} straight away.",
       "moneyUnreadable": "Enter an amount in pounds, like 250 or 250.50"
-    },
-    "ending": {
-      "doneMessage": "Thank you. Your answers have gone to your adviser, who will be in touch if anything needs a conversation."
     }
   },
   "client": {
