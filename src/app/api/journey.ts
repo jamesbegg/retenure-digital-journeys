@@ -47,13 +47,11 @@ function copy(reader: Reader): JourneyCopy {
     sendTo: reader.string('sendTo'),
     doneTitle: reader.string('doneTitle'),
     doneBody: reader.string('doneBody'),
-    alreadyCompletedTitle: reader.string('alreadyCompletedTitle'),
-    alreadyCompletedBody: reader.string('alreadyCompletedBody'),
-    notYou: reader.string('notYou'),
     close: reader.string('close'),
     emailAdviser: reader.string('emailAdviser'),
     adviserLabel: reader.string('adviserLabel'),
     progressValue: reader.string('progressValue'),
+    moneyUnreadable: reader.string('moneyUnreadable'),
   };
 }
 
@@ -64,7 +62,6 @@ function meta(reader: Reader): JourneyMeta {
     title: reader.string('title'),
     estimatedMinutes: reader.integer('estimatedMinutes', 1),
     copy: copy(reader.object('copy')),
-    ending: { doneMessage: reader.object('ending').string('doneMessage') },
   };
 }
 
@@ -124,11 +121,15 @@ export function parseJourneyResponse(json: unknown): JourneyResponse {
   ) {
     client.fail('lead', 'must match the one member with the lead role');
   }
+  const respondentId = client.optionalString('respondentId');
+  if (respondentId !== undefined && !memberIds.includes(respondentId)) {
+    client.fail('respondentId', 'not a household member');
+  }
   return {
     schemaVersion: body.schemaVersion(),
     status,
     journey: meta(body.object('journey')),
-    client: { lead, members },
+    client: { lead, members, ...(respondentId !== undefined && { respondentId }) },
     adviser: adviser(body.object('adviser')),
     sections: parseSections(body, new Set(memberIds)),
     expiresAt: body.timestamp('expiresAt'),

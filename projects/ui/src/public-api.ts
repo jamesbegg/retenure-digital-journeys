@@ -31,3 +31,7 @@ export * from './lib/interfaces/client-header';
 export * from './lib/composites/client-header/client-header';
 export * from './lib/interfaces/modal';
 export * from './lib/composites/modal/modal';
+export * from './lib/interfaces/fact-card';
+export * from './lib/composites/fact-card/fact-card';
+export * from './lib/interfaces/question-renderer';
+export * from './lib/composites/question-renderer/question-renderer';

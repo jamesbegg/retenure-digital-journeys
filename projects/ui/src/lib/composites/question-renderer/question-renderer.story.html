@@ -1,0 +1,10 @@
+<main class="ret-stack">
+  <h1>QuestionRenderer</h1>
+  <p>One question of every kind, shown one at a time. Complete: {{ complete() }}</p>
+  <ret-question-renderer
+    [section]="section"
+    [copy]="copy"
+    [(answers)]="answers"
+    (complete)="complete.set($event)"
+  />
+</main>

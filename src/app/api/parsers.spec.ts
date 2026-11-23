@@ -88,14 +88,49 @@ describe('parseJourneyResponse', () => {
     }
   });
 
-  it.each(['checkbox', 'confirmFacts', 'goals', 'email', 'tel', 'slider'])(
-    'rejects the kind %s in v1',
-    (kind) => {
+  it.each(['checkbox', 'goals', 'email', 'tel', 'slider'])('rejects the kind %s in v1', (kind) => {
+    const body = clone(hartwellOpenJourney);
+    firstQuestion(body).kind = kind;
+    expect(() => parseJourneyResponse(body)).toThrow(/question\.kind: expected one of/);
+  });
+
+  describe('confirmFacts', () => {
+    const facts = (count: number) =>
+      Array.from({ length: count }, (_, i) => ({ id: `f${i}`, label: `Label ${i}`, value: 'x' }));
+    const withFacts = (patch: Record<string, unknown>) => {
       const body = clone(hartwellOpenJourney);
-      firstQuestion(body).kind = kind;
-      expect(() => parseJourneyResponse(body)).toThrow(/question\.kind: expected one of/);
-    },
-  );
+      Object.assign(firstQuestion(body), { kind: 'confirmFacts', required: true, ...patch });
+      return body;
+    };
+
+    it('accepts one to eight facts and keeps them', () => {
+      for (const count of [1, 8]) {
+        const question = firstQuestion(parseJourneyResponse(withFacts({ facts: facts(count) })));
+        expect(question.kind).toBe('confirmFacts');
+        expect(question.facts).toEqual(facts(count));
+      }
+    });
+
+    it('keeps a fact for a household member and rejects one for a stranger', () => {
+      const fact = { ...facts(1)[0], personId: 'per-priya' };
+      expect(firstQuestion(parseJourneyResponse(withFacts({ facts: [fact] }))).facts).toEqual([
+        fact,
+      ]);
+      const stranger = { ...fact, personId: 'per-someone-else' };
+      expect(() => parseJourneyResponse(withFacts({ facts: [stranger] }))).toThrow(/personId/);
+    });
+
+    it.each([
+      ['no facts', { facts: [] }],
+      ['nine facts', { facts: facts(9) }],
+      ['a missing facts list', {}],
+      ['duplicate fact ids', { facts: [...facts(2), { ...facts(1)[0] }] }],
+      ['an optional question', { facts: facts(1), required: false }],
+      ['a fact with no value', { facts: [{ id: 'f0', label: 'Label' }] }],
+    ])('rejects %s', (_, patch) => {
+      expect(() => parseJourneyResponse(withFacts(patch))).toThrow(ParseError);
+    });
+  });
 
   it.each([
     { type: 'notice', tone: 'info', text: 'Hello' },
@@ -271,14 +306,35 @@ describe('parseJourneyResponse', () => {
     'sendTo',
     'doneTitle',
     'doneBody',
-    'alreadyCompletedTitle',
-    'alreadyCompletedBody',
-    'notYou',
     'close',
     'emailAdviser',
     'adviserLabel',
     'progressValue',
+    'moneyUnreadable',
   ];
+
+  it('keeps a respondent who is a household member, even when not the lead', () => {
+    const body = clone(hartwellOpenJourney);
+    body.client.respondentId = 'per-tom';
+    const parsed = parseJourneyResponse(body);
+    expect(parsed.status === 'open' && parsed.client.respondentId).toBe('per-tom');
+  });
+
+  it('rejects a respondent who is not a household member', () => {
+    const body = clone(hartwellOpenJourney);
+    body.client.respondentId = 'per-someone-else';
+    expect(() => parseJourneyResponse(body)).toThrow(/respondentId/);
+  });
+
+  it('needs none of the retired already-completed keys, and ignores them if sent', () => {
+    const body = clone(hartwellOpenJourney);
+    for (const key of ['alreadyCompletedTitle', 'alreadyCompletedBody', 'notYou']) {
+      delete body.journey.copy[key];
+    }
+    expect(parseJourneyResponse(body)).toEqual(hartwellOpenJourney);
+    body.journey.copy.notYou = 'Old text';
+    expect(parseJourneyResponse(body)).toEqual(hartwellOpenJourney);
+  });
 
   it.each(checkInCopyKeys)('rejects journey copy without %s', (key) => {
     const body = clone(hartwellOpenJourney);

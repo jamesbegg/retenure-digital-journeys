@@ -40,7 +40,7 @@ Builds the client side of `docs/features/questions-engine.md` from the user's ap
 - The `h1` is the section title.
 - Cards are revealed one at a time. The next appears and scrolls into view once the current one is answered.
 - Answered cards stay visible and editable.
-- A free-text answer counts as answered on blur, or straight away if optional.
+- A free-text answer counts as answered once it is non-blank and valid; errors show on blur or Continue. Keyboard users must find the next card before they tab on. An optional blank is answered straight away.
 - Continue appears once every card is answered.
 - A FactCard of what we hold comes first when we hold data.
 
@@ -112,7 +112,7 @@ A0 lands first. A and B branch from it and share no files.
 
 ## Copy
 
-- **After the journey loads, all UI text comes from `JourneyCopy`** on the wire. It gains `confirm`, `makeChange`, `confirmed`, `cancel`, `save`, `factNote` ("Anything I should know?"), `contactLine`, `urgentLink`, `sendTo` ("Send to {adviser}"), `doneTitle`, `doneBody`, `alreadyCompletedTitle`, `alreadyCompletedBody` and `notYou`. This is agreed with the backend in the same work.
+- **After the journey loads, all UI text comes from `JourneyCopy`** on the wire. It gains `confirm`, `makeChange`, `confirmed`, `cancel`, `save`, `factNote` ("Anything I should know?"), `contactLine`, `urgentLink`, `sendTo` ("Send to {adviser}"), `doneTitle` and `doneBody`. The already-completed page renders from a response with no copy, so it uses app-owned text. This is agreed with the backend in the same work.
 - **Before the journey loads, text is app-owned English** in one constants file: verify, the link-problem page, the locked page and the generic error page. These screens have no adviser data, so they leave out the adviser line and keep a neutral "contact your adviser". Expired and already completed carry the adviser from their response.
 
 ## More states
@@ -129,7 +129,7 @@ A0 lands first. A and B branch from it and share no files.
 ## Renderer contract
 
 - **Inputs:** `section`, `answers` as a `model<SectionAnswers>()` (two-way), and `copy`. There's no `members` input: model-written prompts already name the person.
-- **Output:** `complete`, emitted on every change. It's true when every required card is answered and no shown field has a validation error. An optional blank counts as complete. A required field blurred while blank doesn't count as answered.
+- **Output:** `complete`, emitted on every change. It's true when every required card is answered and no shown field has a validation error. An optional blank counts as complete. A required field blurred while blank shows its error and doesn't count as answered.
 - **FactCard** renders only the `confirmFacts` question kind. The `facts` block stays rejected.
 - **The story** has one fixture per v1 kind, including the YesNo detail box and a radio option input. There are no union inputs, so `Variants` is empty.
 
