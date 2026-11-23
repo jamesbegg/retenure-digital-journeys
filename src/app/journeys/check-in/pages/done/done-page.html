@@ -1,0 +1,6 @@
+<ret-check-in-frame [heading]="heading()" [withContact]="true">
+  <ret-icon name="circle-check" size="lg" tone="success" />
+  @if (body(); as text) {
+    <p>{{ text }}</p>
+  }
+</ret-check-in-frame>

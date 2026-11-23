@@ -51,4 +51,41 @@ describe('check-in routes', () => {
     screen.getByRole('heading', { level: 1, name: "We've paused this check-in" });
     expect(screen.queryByRole('group', { name: 'Your adviser' })).toBeNull();
   });
+
+  it('keeps a section link opened before verifying, and lands on it once verified', async () => {
+    const { http, journey, path, settle } = await open('/check-in/section/sec-changes');
+    expect(path()).toBe('/start');
+    await signIn(http, journey);
+    await settle();
+    expect(path()).toBe('/check-in/section/sec-changes');
+    screen.getByRole('heading', { level: 1, name: 'What has changed' });
+  });
+
+  it('brings the client back to the same section, with their answers, after the session lapses', async () => {
+    const { http, journey, path, settle, harness } = await open('/start');
+    await signIn(http, journey);
+    await settle();
+    await harness.navigateByUrl('/check-in/section/sec-changes');
+    journey.setAnswers('sec-changes', { 'q-moved': { kind: 'yesNo', value: true } });
+
+    const renewed = journey.renew();
+    http.expectOne('/client/journey/session').flush(
+      {
+        error: 'UNAUTHORIZED',
+        statusCode: 401,
+        message: 'Gone',
+        requestId: 'r1',
+        reason: 'session_expired',
+      },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+    await renewed;
+    await settle();
+    expect(path()).toBe('/start');
+
+    await signIn(http, journey);
+    await settle();
+    expect(path()).toBe('/check-in/section/sec-changes');
+    expect(journey.answers()['sec-changes']).toEqual({ 'q-moved': { kind: 'yesNo', value: true } });
+  });
 });

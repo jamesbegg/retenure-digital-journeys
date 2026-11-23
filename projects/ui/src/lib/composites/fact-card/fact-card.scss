@@ -79,8 +79,13 @@
 
   @container (min-width: 30rem) {
     .row {
-      flex-direction: row;
+      flex-flow: row nowrap;
       align-items: baseline;
+    }
+
+    .label {
+      flex: 1 1 auto;
+      min-inline-size: 0;
     }
 
     .value {

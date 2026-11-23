@@ -1,6 +1,9 @@
 import { Routes } from '@angular/router';
 import { inStage } from './check-in-navigation';
 import { CheckInRoot } from '../../journey/check-in-root';
+import { DonePage } from './pages/done/done-page';
+import { ReviewPage } from './pages/review/review-page';
+import { SectionPage } from './pages/section/section-page';
 import { StatusPage } from './pages/status/status-page';
 import { VerifyPage } from './pages/verify/verify-page';
 import { WelcomePage } from './pages/welcome/welcome-page';
@@ -61,6 +64,21 @@ export default [
         path: 'check-in/welcome',
         component: WelcomePage,
         canActivate: [inStage('ready')],
+      },
+      {
+        path: 'check-in/section/:sectionId',
+        component: SectionPage,
+        canActivate: [inStage('ready')],
+      },
+      {
+        path: 'check-in/review',
+        component: ReviewPage,
+        canActivate: [inStage('ready')],
+      },
+      {
+        path: 'check-in/done',
+        component: DonePage,
+        canActivate: [inStage('done')],
       },
       // Every other address, and an empty one, goes to the page for the current stage.
       { path: '**', children: [], canActivate: [inStage()] },
