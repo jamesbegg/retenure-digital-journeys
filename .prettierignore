@@ -4,3 +4,4 @@ package-lock.json
 /.angular
 /playwright-report
 /test-results
+/src/app/api/wire-samples
