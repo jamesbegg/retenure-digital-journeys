@@ -67,3 +67,20 @@ test('has no serious axe violations and reflows at 320 px with 200% text', async
   expect(await reflowProblems(page)).toEqual([]);
   await expect(page.getByRole('button', { name: 'I need more time' })).toBeVisible();
 });
+
+test('a sheet rises from the bottom edge on a phone and centres on a desktop', async ({ page }) => {
+  const box = async () => (await page.getByRole('dialog').boundingBox())!;
+  await page.setViewportSize({ width: 390, height: 800 });
+  await open(page, '/gallery/modal');
+  await page.getByRole('button', { name: 'Open: sheet' }).click();
+  const phone = await box();
+  expect(phone.width).toBe(390);
+  expect(phone.y + phone.height).toBe(800);
+  await page.keyboard.press('Escape');
+
+  await page.setViewportSize({ width: 1200, height: 800 });
+  await page.getByRole('button', { name: 'Open: sheet' }).click();
+  const desktop = await box();
+  expect(desktop.width).toBeLessThan(600);
+  expect(desktop.y + desktop.height).toBeLessThan(800);
+});

@@ -7,7 +7,7 @@ import {
   output,
   viewChild,
 } from '@angular/core';
-import { ModalTone } from '../../interfaces/modal';
+import { ModalPlacement, ModalTone } from '../../interfaces/modal';
 import { Button } from '../../primitives/button/button';
 import { nextId } from '../../utils/id';
 
@@ -22,6 +22,7 @@ export class Modal {
   readonly primaryLabel = input.required<string>();
   readonly secondaryLabel = input<string>();
   readonly tone = input<ModalTone>('default');
+  readonly placement = input<ModalPlacement>('centre');
   readonly closeLabel = input.required<string>();
   readonly open = model(false);
   readonly primaryPressed = output<void>();

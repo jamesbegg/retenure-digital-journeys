@@ -175,6 +175,9 @@ A0 lands first. A and B branch from it and share no files.
   - FactCard and the `note` were agreed with the backend lane (adopted in its U3).
   - Unit A updates `questions-engine.md`'s release scope and `parsers.spec.ts`.
 - **A replan, recorded:** A0's six shared components. All are designed on the canvas's component library page, which satisfies the design gate.
+- **A replan, recorded (wave 2):** two more shared pieces for the screens, both designed on the canvas.
+  - `Steps`, a composite: a numbered list with the states done, current and todo, and labels and meta from inputs. The welcome screen lists the sections with it.
+  - `Modal` gains `placement: 'centre' | 'sheet'`. A sheet rises from the bottom edge below 48rem and is centred above it. Urgent help uses it.
 
 ## Replanning triggers
 

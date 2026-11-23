@@ -23,4 +23,24 @@
       <p>{{ tone.value }}. You have been inactive for a while.</p>
     </ret-modal>
   }
+  @for (placement of variants.placement | keyvalue: null; track placement.key) {
+    <p>
+      <ret-button
+        [label]="'Open: ' + placement.key"
+        variant="secondary"
+        (pressed)="opened.set(placement.key)"
+      />
+    </p>
+    <ret-modal
+      [placement]="placement.key"
+      heading="Talk to your adviser now"
+      primaryLabel="Call"
+      closeLabel="Close"
+      [open]="opened() === placement.key"
+      (openChange)="opened.set(null)"
+      (primaryPressed)="opened.set(null)"
+    >
+      <p>{{ placement.value }}.</p>
+    </ret-modal>
+  }
 </main>

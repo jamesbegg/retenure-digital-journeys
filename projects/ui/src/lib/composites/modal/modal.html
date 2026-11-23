@@ -1,4 +1,10 @@
-<dialog #dialog class="dialog" [attr.aria-labelledby]="headingId" (close)="closed()">
+<dialog
+  #dialog
+  class="dialog"
+  [attr.data-placement]="placement()"
+  [attr.aria-labelledby]="headingId"
+  (close)="closed()"
+>
   <div class="head">
     <h2 class="heading" [id]="headingId">{{ heading() }}</h2>
     <ret-button
