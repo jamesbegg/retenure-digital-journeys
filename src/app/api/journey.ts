@@ -54,6 +54,7 @@ function copy(reader: Reader): JourneyCopy {
     emailAdviser: reader.string('emailAdviser'),
     adviserLabel: reader.string('adviserLabel'),
     progressValue: reader.string('progressValue'),
+    moneyUnreadable: reader.string('moneyUnreadable'),
   };
 }
 
@@ -64,7 +65,6 @@ function meta(reader: Reader): JourneyMeta {
     title: reader.string('title'),
     estimatedMinutes: reader.integer('estimatedMinutes', 1),
     copy: copy(reader.object('copy')),
-    ending: { doneMessage: reader.object('ending').string('doneMessage') },
   };
 }
 

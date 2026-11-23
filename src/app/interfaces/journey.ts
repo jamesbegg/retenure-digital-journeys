@@ -17,7 +17,6 @@ export interface JourneyMeta {
   title: string;
   estimatedMinutes: number;
   copy: JourneyCopy;
-  ending: { doneMessage: string };
 }
 
 export interface OpenJourney {

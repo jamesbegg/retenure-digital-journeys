@@ -34,4 +34,5 @@ export interface JourneyCopy {
   emailAdviser: string;
   adviserLabel: string;
   progressValue: string;
+  moneyUnreadable: string;
 }

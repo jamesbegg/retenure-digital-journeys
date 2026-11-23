@@ -313,6 +313,7 @@ describe('parseJourneyResponse', () => {
     'emailAdviser',
     'adviserLabel',
     'progressValue',
+    'moneyUnreadable',
   ];
 
   it.each(checkInCopyKeys)('rejects journey copy without %s', (key) => {

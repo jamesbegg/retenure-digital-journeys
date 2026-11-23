@@ -27,7 +27,26 @@
       "leaveWarning": "If you leave, your answers will not be saved",
       "timeoutWarning": "You've been inactive. Do you need more time?",
       "moreTime": "I need more time",
-      "followUpsCleared": "Your other answers to this question have been cleared"
+      "followUpsCleared": "Your other answers to this question have been cleared",
+      "confirm": "Confirm",
+      "makeChange": "Make a change",
+      "confirmed": "Confirmed",
+      "cancel": "Cancel",
+      "save": "Save",
+      "close": "Close",
+      "factNote": "Anything I should know?",
+      "contactLine": "Rather talk it through? Email me and we'll arrange a call.",
+      "urgentLink": "Something urgent or worrying you?",
+      "emailAdviser": "Email {adviser}",
+      "adviserLabel": "Your adviser",
+      "sendTo": "Send to {adviser}",
+      "progressValue": "Step {step} of {total}",
+      "doneTitle": "Thank you, {name}. We've received your answers.",
+      "doneBody": "{adviser} will be in touch.",
+      "alreadyCompletedTitle": "This check-in has already been completed.",
+      "alreadyCompletedBody": "It was sent to {adviser} on {date}.",
+      "notYou": "Wasn't you? If you didn't send these answers, contact {adviser} straight away.",
+      "moneyUnreadable": "Enter an amount in pounds, like 250 or 250.50"
     },
     "ending": {
       "doneMessage": "Thank you. Your answers have gone to your adviser, who will be in touch if anything needs a conversation."

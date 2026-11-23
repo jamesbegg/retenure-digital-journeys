@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
-import { copy } from './fixtures';
 import { parseJourneyResponse } from './journey';
 
 const dir = 'src/app/api/wire-samples';
@@ -18,11 +17,18 @@ describe("the backend's wire samples", () => {
     expect(createHash('sha256').update(read(name)).digest('hex')).toBe(manifest[name]);
   });
 
-  // The samples predate the check-in copy keys, so the fixture copy fills the gaps. Re-copy the
-  // samples when the backend sends them and this fallback does nothing.
-  it.each(samples)('%s parses', (name) => {
+  it.each(samples)('%s parses as it is, with its questions', (name) => {
     const sample = JSON.parse(read(name).toString());
-    sample.journey.copy = { ...copy, ...sample.journey.copy };
-    expect(parseJourneyResponse(sample).status).toBe('open');
+    const journey = parseJourneyResponse(sample);
+    if (journey.status !== 'open') throw new Error('expected an open journey');
+    const questions = journey.sections.flatMap((s) =>
+      s.blocks.flatMap((b) => (b.type === 'card' ? [b.question] : [])),
+    );
+    expect(questions.length).toBe(
+      sample.sections.flatMap((s: { blocks: unknown[] }) => s.blocks).length,
+    );
+    if (name === 'journey.open-all-kinds.json') {
+      expect(questions.some((q) => q.kind === 'confirmFacts')).toBe(true);
+    }
   });
 });

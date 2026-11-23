@@ -69,6 +69,7 @@ export const copy = {
   emailAdviser: 'Email {adviser}',
   adviserLabel: 'Your adviser',
   progressValue: 'Step {step} of {total}',
+  moneyUnreadable: 'Enter an amount in pounds, like 250 or 250.50',
 } satisfies JourneyCopy;
 
 const hartwellAdviser = { name: 'Helen Hartwell', email: 'helen@hartwell.example' };
@@ -82,7 +83,6 @@ export const hartwellOpenJourney = {
     title: 'Your annual check-in',
     estimatedMinutes: 5,
     copy,
-    ending: { doneMessage: 'Helen will review your answers before your review meeting.' },
   },
   client: {
     lead: { id: 'per-priya', firstName: 'Priya', role: 'lead' },
@@ -230,9 +230,6 @@ export const northgateOpenJourney = {
     title: 'A quick check-in',
     estimatedMinutes: 2,
     copy,
-    ending: {
-      doneMessage: 'Thank you. Your adviser will be in touch if anything needs a follow-up.',
-    },
   },
   client: {
     lead: { id: 'per-lead', firstName: 'Alex', role: 'lead' },

@@ -353,7 +353,6 @@ interface JourneyMeta {
   title: string;               // "Your annual check-in"
   estimatedMinutes: number;
   copy: JourneyCopy;
-  ending: { doneMessage: string };
 }
 
 interface JourneyCopy {        // every UI string the components take as input
@@ -392,6 +391,7 @@ interface JourneyCopy {        // every UI string the components take as input
   emailAdviser: string;
   adviserLabel: string;
   progressValue: string;       // "Step {step} of {total}"
+  moneyUnreadable: string;     // "Enter an amount in pounds, like 250 or 250.50"
 }
 
 interface ClientInfo {
@@ -685,7 +685,7 @@ It must decide retention, who can see the data, and whether identifiers are scop
 
 - **Parsers:** each response's valid fixture parses; an unknown `kind`, `type`, `rule` or `schemaVersion`, a foreign asset URL, a wrong type or a missing field each fails.
 - **Renderer:**
-  - each v1 kind renders its component, and `personId` questions name the person
+  - each v1 kind renders its component
   - the per-kind completion rules, including optional blanks, `false` and whitespace
   - an option-input error appears on its field
   - the v1 parser rejects `checkbox`, `goals`, `notice`, `facts` and any `followUps`
