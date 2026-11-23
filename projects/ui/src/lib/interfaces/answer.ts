@@ -5,5 +5,9 @@ export type AnswerValue =
   | { kind: 'text'; value: string }
   | { kind: 'money'; value: string }
   | { kind: 'date'; value: string }
-  | { kind: 'confirmFacts'; changed: { factId: string; newValue: string }[] }
+  | { kind: 'confirmFacts'; changed: { factId: string; newValue: string }[]; note?: string }
   | { kind: 'goals'; changes?: string };
+
+export type SectionAnswers = Record<string, AnswerValue>;
+
+export type FactCardValue = Omit<Extract<AnswerValue, { kind: 'confirmFacts' }>, 'kind'> | null;

@@ -1,0 +1,26 @@
+<main class="ret-stack">
+  <h1>Modal</h1>
+  <p>{{ variants.open }}. Escape or Close dismisses it and returns focus to the button.</p>
+  @for (tone of variants.tone | keyvalue: null; track tone.key) {
+    <p>
+      <ret-button
+        [label]="'Open: ' + tone.key"
+        variant="secondary"
+        (pressed)="opened.set(tone.key)"
+      />
+    </p>
+    <ret-modal
+      [tone]="tone.key"
+      heading="Do you need more time?"
+      primaryLabel="I need more time"
+      secondaryLabel="Leave"
+      closeLabel="Close"
+      [open]="opened() === tone.key"
+      (openChange)="opened.set(null)"
+      (primaryPressed)="opened.set(null)"
+      (secondaryPressed)="opened.set(null)"
+    >
+      <p>{{ tone.value }}. You have been inactive for a while.</p>
+    </ret-modal>
+  }
+</main>

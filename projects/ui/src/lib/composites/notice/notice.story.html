@@ -1,0 +1,15 @@
+<main class="ret-stack">
+  <h1>Notice</h1>
+  @for (tone of variants.tone | keyvalue: null; track tone.key) {
+    <ret-notice
+      [tone]="tone.key"
+      [heading]="tone.value"
+      body="Nothing changes in your plan until you and Helen have talked it through."
+    />
+  }
+  <h2>Announcements</h2>
+  @for (live of variants.live | keyvalue: null; track live.key) {
+    <ret-notice [live]="live.key" [heading]="live.key" [body]="live.value" />
+  }
+  <ret-notice body="A notice with no heading is one line of body text." />
+</main>

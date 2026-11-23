@@ -18,6 +18,7 @@ import {
   LoaderCircle,
   Mail,
   Pencil,
+  Phone,
   TriangleAlert,
   X,
 } from 'lucide';
@@ -33,6 +34,7 @@ const ICONS = {
   'loader-circle': LoaderCircle,
   mail: Mail,
   pencil: Pencil,
+  phone: Phone,
   'triangle-alert': TriangleAlert,
   x: X,
 } satisfies Record<IconName, typeof Check>;

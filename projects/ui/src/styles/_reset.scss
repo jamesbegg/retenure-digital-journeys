@@ -35,3 +35,9 @@ select {
   font: inherit;
   color: inherit;
 }
+
+// Plain lists (journey copy) keep their bullets inside the box; layout lists set a class.
+ul:not([class]),
+ol:not([class]) {
+  padding-inline-start: 1.5em;
+}

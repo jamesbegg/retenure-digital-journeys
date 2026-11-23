@@ -8,6 +8,7 @@ export type IconName =
   | 'loader-circle'
   | 'mail'
   | 'pencil'
+  | 'phone'
   | 'triangle-alert'
   | 'x';
 export type IconSize = 'sm' | 'md' | 'lg';

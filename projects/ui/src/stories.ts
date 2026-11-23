@@ -17,4 +17,15 @@ export const stories: Record<string, () => Promise<Type<unknown>>> = {
   'text-field': () =>
     import('./lib/primitives/text-field/text-field.story').then((m) => m.TextFieldStory),
   'yes-no': () => import('./lib/primitives/yes-no/yes-no.story').then((m) => m.YesNoStory),
+  'adviser-contact': () =>
+    import('./lib/composites/adviser-contact/adviser-contact.story').then(
+      (m) => m.AdviserContactStory,
+    ),
+  badge: () => import('./lib/primitives/badge/badge.story').then((m) => m.BadgeStory),
+  'client-header': () =>
+    import('./lib/composites/client-header/client-header.story').then((m) => m.ClientHeaderStory),
+  modal: () => import('./lib/composites/modal/modal.story').then((m) => m.ModalStory),
+  notice: () => import('./lib/composites/notice/notice.story').then((m) => m.NoticeStory),
+  'progress-bar': () =>
+    import('./lib/primitives/progress-bar/progress-bar.story').then((m) => m.ProgressBarStory),
 };

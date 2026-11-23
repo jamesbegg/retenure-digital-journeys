@@ -37,7 +37,7 @@ WCAG 2.2 AA is the floor. Many clients are older, use larger text settings, use 
 
 - Honour `prefers-reduced-motion`. No auto-playing animation.
 - Never use colour alone to show state. Pair it with text or an icon.
-- Support dark mode only through tokens, and test contrast in both.
+- The client page is light-only in v1. Colour comes only from tokens, and contrast is tested against them.
 
 ## How to check
 

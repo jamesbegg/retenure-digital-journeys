@@ -13,6 +13,7 @@ export const iconNames: Variants<Icon>['name'] = {
   'loader-circle': 'Pending button',
   mail: 'Email the adviser',
   pencil: 'Edit an answer',
+  phone: 'Call the adviser',
   'triangle-alert': 'Warning notice',
   x: 'Close or remove',
 };

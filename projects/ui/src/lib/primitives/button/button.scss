@@ -71,7 +71,8 @@
 
 .secondary:active:not(:disabled),
 .ghost:active:not(:disabled) {
-  background: var(--ret-color-surface);
+  background: var(--ret-color-surface-muted);
+  background-image: linear-gradient(var(--ret-overlay-active), var(--ret-overlay-active));
 }
 
 .ghost {

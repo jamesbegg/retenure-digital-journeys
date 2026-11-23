@@ -1,0 +1,21 @@
+@use '../../tokens/mixins';
+@include mixins.tones;
+
+:host {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ret-space-2);
+  min-block-size: 1.75rem;
+  padding: var(--ret-space-1) var(--ret-space-3);
+  border-radius: var(--ret-radius-pill);
+  background: var(--tone-bg);
+  color: var(--tone-fg);
+  font-size: var(--ret-font-size-sm);
+  font-weight: var(--ret-font-weight-bold);
+  line-height: var(--ret-line-height-tight);
+}
+
+:host([data-size='sm']) {
+  min-block-size: 1.375rem;
+  padding-inline: var(--ret-space-2);
+}

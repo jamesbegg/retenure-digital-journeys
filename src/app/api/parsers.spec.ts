@@ -259,6 +259,39 @@ describe('parseJourneyResponse', () => {
     }
   });
 
+  const checkInCopyKeys = [
+    'confirm',
+    'makeChange',
+    'confirmed',
+    'cancel',
+    'save',
+    'factNote',
+    'contactLine',
+    'urgentLink',
+    'sendTo',
+    'doneTitle',
+    'doneBody',
+    'alreadyCompletedTitle',
+    'alreadyCompletedBody',
+    'notYou',
+    'close',
+    'emailAdviser',
+    'adviserLabel',
+    'progressValue',
+  ];
+
+  it.each(checkInCopyKeys)('rejects journey copy without %s', (key) => {
+    const body = clone(hartwellOpenJourney);
+    delete body.journey.copy[key];
+    expect(() => parseJourneyResponse(body)).toThrow(new RegExp(key));
+  });
+
+  it.each(checkInCopyKeys)('rejects journey copy where %s is not a string', (key) => {
+    const body = clone(hartwellOpenJourney);
+    body.journey.copy[key] = 42;
+    expect(() => parseJourneyResponse(body)).toThrow(new RegExp(key));
+  });
+
   it('rejects duplicate question, section, member or option ids', () => {
     const question = clone(hartwellOpenJourney);
     spending(question).id = 'q-email';
