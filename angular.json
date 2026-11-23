@@ -45,6 +45,10 @@
                 {
                   "replace": "src/app/dev-routes.ts",
                   "with": "src/app/dev-routes.prod.ts"
+                },
+                {
+                  "replace": "src/app/dev-mock/dev-mock.ts",
+                  "with": "src/app/dev-mock/dev-mock.prod.ts"
                 }
               ]
             },

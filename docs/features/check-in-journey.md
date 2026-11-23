@@ -69,7 +69,18 @@ Builds the client side of `docs/features/questions-engine.md` from the user's ap
   - `SectionAnswers = Record<questionId, AnswerValue>`
   - `QuestionRenderer`: see Renderer contract below (one API: `section: RenderableSection`, `answers` as a two-way `model<SectionAnswers>()`, `copy`; output `complete`)
 - `Question` gains `(QuestionBase & { kind: 'confirmFacts'; facts: HeldFact[] })`. `AnswerValue`'s `confirmFacts` gains `note?: string`. The parser accepts `confirmFacts`, with 1 to 8 facts, unique fact ids, and `required` true.
-- App `interfaces/`: `JourneyState = 'loading' | 'ready' | 'error' | 'blocked'`, and the screen states.
+- App `interfaces/`: `JourneyStage`, the screen the `JourneyService` is on:
+  - `link-problem`: no token and no session, so "open the link in your email again".
+  - `verify`: the date-of-birth step, including after the session lapses.
+  - `loading`: verified, fetching the journey.
+  - `ready`: the journey is open and answerable.
+  - `done`: the submission is received.
+  - `already-completed`: the journey was submitted under another id.
+  - `expired`: the invitation expired; the adviser is on the response.
+  - `locked`: `verification_locked`.
+  - `link-reissued`: a new link is on its way (`link_reissued`).
+  - `link-requested`: the adviser has been asked to send a new link (`link_requested`).
+  - `error`: the generic page; `errorReason` says which.
 
 ## Data flow and invariants
 
@@ -139,7 +150,8 @@ A0 lands first. A and B branch from it and share no files.
   - FactCard: confirm, change with Save and Cancel, and the note
   - progressive disclosure: the reveal order, editing an earlier card, Continue appearing, and optional blanks
 - **e2e:**
-  - a synthetic journey on both synthetic firm hosts, using mocked `/client/*` routes in Playwright
+  - e2e runs against `ng serve` with the dev mock (`src/app/dev-mock`) answering `/client/*`, and drives scenarios through `?mock=`. That is one data source, with no `page.route` stubs.
+  - a synthetic journey on both synthetic firm hosts
   - axe and zoom on every journey route
   - tenancy isolation
   - lost submit, then reverify, reaching the done page
