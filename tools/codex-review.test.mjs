@@ -27,6 +27,7 @@ describe('routeModel', () => {
       'projects/ui/src/lib/interfaces/story.ts',
       'e2e/tenancy.spec.ts',
       'package.json',
+      'stylelint.config.mjs',
     ]) {
       assert.equal(routeModel([file], 5), 'gpt-6.2-sol', file);
     }

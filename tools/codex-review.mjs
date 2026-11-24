@@ -18,7 +18,7 @@ const SOL_PATHS = [
   /^projects\/ui\/src\/lib\/(interfaces|tokens)\//,
   /^e2e\/tenancy/,
   /^(\.github|\.claude|\.codex|tools)\//,
-  /^(package(-lock)?\.json|angular\.json|eslint\.config|playwright\.config|tsconfig)/,
+  /^(package(-lock)?\.json|angular\.json|eslint\.config|playwright\.config|stylelint\.config|tsconfig)/,
 ];
 
 const PROMPT = `You are an independent reviewer of a pull request in this repository.
