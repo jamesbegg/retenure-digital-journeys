@@ -33,20 +33,22 @@
       <ret-button [label]="save()" [disabled]="disabled()" (pressed)="saveChange()" />
     </div>
   } @else {
-    <dl class="rows">
-      @for (row of rows(); track row.id) {
-        <div class="row">
-          <dt class="label">{{ row.label }}</dt>
-          <dd class="value">{{ row.value }}</dd>
-        </div>
-      }
-      @if (value()?.note; as note) {
-        <div class="row">
-          <dt class="label">{{ factNote() }}</dt>
-          <dd class="value">{{ note }}</dd>
-        </div>
-      }
-    </dl>
+    @if (rows().length || value()?.note) {
+      <dl class="rows">
+        @for (row of rows(); track row.id) {
+          <div class="row">
+            <dt class="label">{{ row.label }}</dt>
+            <dd class="value">{{ row.value }}</dd>
+          </div>
+        }
+        @if (value()?.note; as note) {
+          <div class="row">
+            <dt class="label">{{ factNote() }}</dt>
+            <dd class="value">{{ note }}</dd>
+          </div>
+        }
+      </dl>
+    }
     @if (error(); as message) {
       <ret-field-messages [fieldId]="headingId" [error]="message" [errorPrefix]="errorPrefix()" />
     }

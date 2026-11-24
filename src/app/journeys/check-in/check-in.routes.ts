@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { allAnswered, inStage } from './check-in-navigation';
+import { allAnswered, answersOpen, inStage } from './check-in-navigation';
 import { CheckInRoot } from '../../journey/check-in-root';
 import { DonePage } from './pages/done/done-page';
 import { ReviewPage } from './pages/review/review-page';
@@ -63,12 +63,12 @@ export default [
       {
         path: 'check-in/welcome',
         component: WelcomePage,
-        canActivate: [inStage('ready')],
+        canActivate: [inStage('ready'), answersOpen],
       },
       {
         path: 'check-in/section/:sectionId',
         component: SectionPage,
-        canActivate: [inStage('ready')],
+        canActivate: [inStage('ready'), answersOpen],
       },
       {
         path: 'check-in/review',

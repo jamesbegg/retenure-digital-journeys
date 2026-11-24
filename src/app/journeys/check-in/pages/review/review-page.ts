@@ -31,15 +31,15 @@ export class ReviewPage {
           this.journey.answers()[section.id] ?? {},
           journey.journey.copy,
         ),
-      }))
-      .filter(({ facts }) => facts.length);
+      }));
   });
   // The send did not go through, so the answers stay as they are while the client tries again.
   protected readonly failed = computed(
     () =>
-      this.journey.submitProblem() === 'network' ||
+      (this.journey.answersLocked() && !this.journey.busy()) ||
       (this.journey.submitProblem() === 'invalid' && !this.journey.invalidSection()),
   );
+  protected readonly changeable = computed(() => !this.failed() && !this.journey.answersLocked());
   protected readonly progress = computed(() => {
     const total = (this.open()?.sections.length ?? 0) + 1;
     return { label: this.open()?.journey.copy.checkAnswersTitle ?? '', step: total, total };

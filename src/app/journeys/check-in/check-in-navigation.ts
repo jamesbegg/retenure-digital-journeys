@@ -66,6 +66,10 @@ export const inStage =
     stages.includes(inject(JourneyService).stage()) ||
     inject(CheckInNavigation).redirect(state.url);
 
+// While a send's outcome is unknown the answers cannot change, so no page that edits them opens.
+export const answersOpen: CanActivateFn = () =>
+  !inject(JourneyService).answersLocked() || inject(Router).parseUrl(reviewPath);
+
 // Check your answers needs every required question answered, so a client who skipped to it, or
 // whose answers were cleared, goes to the first section that still needs one.
 export const allAnswered: CanActivateFn = () => {

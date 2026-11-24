@@ -231,6 +231,16 @@ describe('FactCard (summary)', () => {
     expect(within(region).queryByRole('button')).toBeNull();
   });
 
+  it('with no facts shows the heading and Make a change, and no empty list', async () => {
+    await render(
+      `<ret-fact-card variant="summary" heading="Your goals" [facts]="facts" ${copy} />`,
+      { imports: [FactCard], componentProperties: { facts: [] } },
+    );
+    const region = screen.getByRole('region', { name: 'Your goals' });
+    expect(region.querySelector('dl')).toBeNull();
+    within(region).getByRole('button', { name: 'Make a change' });
+  });
+
   it('shows a saved note under the rows with the note label', async () => {
     await render(
       `<ret-fact-card variant="summary" heading="Your goals" [facts]="facts" ${copy}

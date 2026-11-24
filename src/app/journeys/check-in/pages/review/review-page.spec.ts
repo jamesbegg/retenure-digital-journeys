@@ -47,11 +47,14 @@ describe('Check your answers', () => {
     within(about).getByText('14 March 1978');
   });
 
-  it('leaves out a section with no answers', async () => {
+  it('keeps a card for a section with no answers, so the client can go back and add one', async () => {
     const page = await openReview();
     page.journey.setAnswers(second.id, {});
     await page.settle();
-    expect(screen.getAllByRole('region')).toHaveLength(1);
+    const card = screen.getByRole('region', { name: second.title });
+    expect(within(card).queryAllByRole('term')).toHaveLength(0);
+    await page.user.click(within(card).getByRole('button', { name: 'Make a change' }));
+    expect(page.path()).toBe(`/check-in/section/${second.id}`);
   });
 
   it('takes "Make a change" back to that section', async () => {
@@ -118,5 +121,36 @@ describe('Check your answers', () => {
     expect(page.path()).toBe('/check-in/review');
     screen.getByText("We couldn't send your answers");
     expect(screen.queryAllByRole('button', { name: 'Make a change' })).toHaveLength(0);
+  });
+
+  it('offers no way back to the answers while the send is pending, and a 502 retry sends the same payload', async () => {
+    const page = await openReview();
+    await page.send();
+    const first = page.http.expectOne('/client/journey/submission');
+    await page.settle();
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+    expect(screen.queryAllByRole('button', { name: 'Make a change' })).toHaveLength(0);
+    await page.harness.navigateByUrl(`/check-in/section/${second.id}`);
+    expect(page.path()).toBe('/check-in/review');
+    await page.harness.navigateByUrl('/check-in/welcome');
+    expect(page.path()).toBe('/check-in/review');
+    first.flush('Bad gateway', { status: 502, statusText: 'Bad Gateway' });
+    await page.settle();
+    await page.send();
+    const retry = page.http.expectOne('/client/journey/submission');
+    expect(retry.request.body).toEqual(first.request.body);
+  });
+
+  it('keeps the client on Check your answers after a 502, so no edit can look saved and be dropped', async () => {
+    const page = await openReview();
+    await page.send();
+    page.http.expectOne('/client/journey/submission').flush('Bad gateway', {
+      status: 502,
+      statusText: 'Bad Gateway',
+    });
+    await page.settle();
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+    await page.harness.navigateByUrl(`/check-in/section/${first.id}`);
+    expect(page.path()).toBe('/check-in/review');
   });
 });

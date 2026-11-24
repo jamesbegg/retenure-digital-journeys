@@ -3,7 +3,7 @@
   <ret-check-in-frame
     [heading]="c.checkAnswersTitle"
     [progress]="progress()"
-    [backable]="true"
+    [backable]="changeable()"
     [withContact]="true"
     (back)="back()"
   >
@@ -18,7 +18,7 @@
     @for (card of cards(); track card.id) {
       <ret-fact-card
         variant="summary"
-        [changeable]="!failed()"
+        [changeable]="changeable()"
         [heading]="card.title"
         [facts]="card.facts"
         [confirm]="c.confirm"
