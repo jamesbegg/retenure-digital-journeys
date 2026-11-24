@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   answeredNotes,
+  buildPrompt,
   buildReview,
   parseDiff,
   reviewTag,
@@ -110,5 +111,33 @@ describe('reviewTag', () => {
   it('names the model, effort and PR for the banner', () => {
     assert.equal(reviewTag('gpt-6.2-sol', '69'), '6.2 Sol Medium | #69');
     assert.equal(reviewTag('gpt-6.1-terra', '7'), '6.1 Terra Medium | #7');
+  });
+});
+
+describe('buildPrompt', () => {
+  it('points Codex at the PR and its files without pasting the diff', () => {
+    const prompt = buildPrompt({
+      pr: '69',
+      base: 'abc123',
+      head: 'def456',
+      files: ['src/app/a.ts', 'docs/b.md'],
+      notes: '',
+    });
+    assert.match(prompt, /pull request #69/);
+    assert.match(prompt, /git diff abc123\.\.\.def456 -- <file>/);
+    assert.match(prompt, /- src\/app\/a\.ts\n- docs\/b\.md/);
+    assert.doesNotMatch(prompt, /^diff --git/m);
+    assert.doesNotMatch(prompt, /^@@/m);
+  });
+
+  it("carries the author's earlier answers", () => {
+    const prompt = buildPrompt({
+      pr: '1',
+      base: 'a',
+      head: 'b',
+      files: ['x.ts'],
+      notes: 'Findings already answered: none.\n\n',
+    });
+    assert.match(prompt, /Findings already answered: none\./);
   });
 });
