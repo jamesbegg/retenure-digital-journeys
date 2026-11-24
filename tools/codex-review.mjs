@@ -128,7 +128,7 @@ function run(cmd, args, input) {
   });
   if (r.status !== 0) {
     throw new Error(
-      `${cmd} ${args.slice(0, 3).join(' ')} failed:\n${r.error?.message ?? r.stderr}`,
+      `${cmd} ${args.slice(0, 3).join(' ')} failed:\n${r.error?.message ?? r.stderr}${r.stdout.slice(-400)}`,
     );
   }
   return r.stdout;
