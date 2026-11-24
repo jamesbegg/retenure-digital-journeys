@@ -6,7 +6,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const SOL = 'gpt-6.2-sol';
 const TERRA = 'gpt-6.1-terra';
-const MAX_DIFF_BYTES = 300_000;
 const SOL_CHANGED_LINES = 600;
 const MINUTES = 60_000;
 const EFFORT = 'medium';
@@ -23,16 +22,21 @@ const SOL_PATHS = [
 ];
 
 const PROMPT = `You are an independent reviewer of a pull request in this repository.
-Read AGENTS.md first for the rules, then review the diff below.
+Read AGENTS.md first for the rules, then review the pull request's changes.
 
 Review for correctness, tenant isolation, accessibility, component reuse (a forked or one-off component is a finding), state and error handling, privacy of client answers, and missing behavioural tests. Ignore style concerns that tooling already enforces.
 
 Report only problems you can point to in the changed code, with the line number in the new file. Report at most 10, most severe first. No findings is a valid answer. Write short plain sentences.
-Read other files only to confirm a finding. Do not edit files, install, build, run tests or use the network. Do not spawn other agents.
+Read the diff yourself with the git command below, one file at a time; skip generated files unless a finding depends on them. Read other files only to confirm a finding. Do not edit files, install, build, run tests or use the network. Do not spawn other agents.
 Keep it simple: do not suggest new abstractions, options, fallbacks or extra guards unless the change is wrong without them. Prefer the smallest fix.
 
 `;
 const RESPONSE_MARK = '**Response to Codex review**';
+
+// The prompt names the PR, its commits and its files; Codex reads the diff from the local checkout itself.
+export function buildPrompt({ pr, base, head, files, notes }) {
+  return `${PROMPT}${notes}This is pull request #${pr}. The head ${head} is checked out. Read each file's changes with:\n  git diff ${base}...${head} -- <file>\n\nChanged files:\n${files.map((f) => `- ${f}`).join('\n')}\n`;
+}
 
 // Earlier findings the author has already answered, so a later round does not raise them again.
 export function answeredNotes(comments) {
@@ -126,7 +130,9 @@ function run(cmd, args, input) {
 }
 
 function review(pr) {
-  const meta = JSON.parse(run('gh', ['pr', 'view', pr, '--json', 'headRefOid,url,comments']));
+  const meta = JSON.parse(
+    run('gh', ['pr', 'view', pr, '--json', 'headRefOid,baseRefName,url,comments']),
+  );
   if (run('git', ['rev-parse', 'HEAD']).trim() !== meta.headRefOid) {
     throw new Error(
       `Check out the PR head first (gh pr checkout ${pr}). Codex reads the working tree.`,
@@ -135,15 +141,21 @@ function review(pr) {
   if (run('git', ['status', '--porcelain']).trim()) {
     throw new Error('Commit or stash local changes first. Codex reads the working tree.');
   }
+  // The diff is read here only to route the model and anchor comments; it is not sent to Codex.
   const diff = run('gh', ['pr', 'diff', pr]);
-  if (Buffer.byteLength(diff) > MAX_DIFF_BYTES) {
-    throw new Error('Diff is over 300 KB. Review it in smaller PRs.');
-  }
+  run('git', ['fetch', '-q', 'origin', meta.baseRefName]);
+  const base = run('git', ['merge-base', `origin/${meta.baseRefName}`, 'HEAD']).trim();
   const files = run('gh', ['pr', 'diff', pr, '--name-only']).trim().split('\n');
   const { commentable, changed } = parseDiff(diff);
   const model = routeModel(files, changed);
 
-  const prompt = `${PROMPT}${answeredNotes(meta.comments)}Diff:\n${diff}`;
+  const prompt = buildPrompt({
+    pr,
+    base,
+    head: meta.headRefOid,
+    files,
+    notes: answeredNotes(meta.comments),
+  });
   const dir = mkdtempSync(join(tmpdir(), 'codex-review-'));
   const out = join(dir, 'result.json');
   const schema = join(dirname(fileURLToPath(import.meta.url)), 'codex-review.schema.json');
