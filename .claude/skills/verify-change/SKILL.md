@@ -15,7 +15,7 @@ Use repository evidence and executable checks; do not treat an implementation ag
 6. For any change near tenancy, confirm `e2e/tenancy.spec.ts` passes and that every new storage key, cache key and request carries the tenant id.
 7. Component reuse pass. Did the change add markup that duplicates a shared component, or put journey, firm or screen knowledge into one? Move it to a typed variant.
 8. KISS pass. Read the diff once for anything the contract did not ask for: an extra tier, flag, option, guard, abstraction, fallback or helper used once. List what you would delete and delete it. Give `reviewer` the same question.
-9. For non-trivial work, run `reviewer`, `test-reviewer` and `accessibility-reviewer` concurrently. Also run `security-reviewer` when tenant resolution, branding, verification, invitations, storage, untrusted input or sensitive data changed.
+9. For non-trivial work, run `reviewer`, `test-reviewer` and `accessibility-reviewer` concurrently. Also run `security-reviewer` when tenant resolution, branding, verification, invitations, storage, untrusted input or sensitive data changed. For a PR, also run the `codex-review` loop in parallel and bucket its findings like any other reviewer's, under the KISS filter.
 10. Deduplicate findings and verify each against code. Note which reviewers raised each one; a finding two reviewers raised independently is the strongest signal. Put every finding in one bucket with a one-line reason:
    - **Act on.** A real correctness, security, data-integrity, or maintainability issue that would block a PR. Fix it.
    - **Consider.** Legitimate, but the cost of fixing now may outweigh it. Report it to the user with the tradeoff.
