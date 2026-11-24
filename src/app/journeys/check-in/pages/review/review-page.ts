@@ -22,16 +22,15 @@ export class ReviewPage {
   protected readonly cards = computed(() => {
     const journey = this.open();
     if (!journey) return [];
-    return journey.sections
-      .map((section) => ({
-        id: section.id,
-        title: section.title,
-        facts: summariseAnswers(
-          section,
-          this.journey.answers()[section.id] ?? {},
-          journey.journey.copy,
-        ),
-      }));
+    return journey.sections.map((section) => ({
+      id: section.id,
+      title: section.title,
+      facts: summariseAnswers(
+        section,
+        this.journey.answers()[section.id] ?? {},
+        journey.journey.copy,
+      ),
+    }));
   });
   // The send did not go through, so the answers stay as they are while the client tries again.
   protected readonly failed = computed(
