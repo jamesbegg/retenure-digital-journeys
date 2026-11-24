@@ -109,7 +109,11 @@ function run(cmd, args, input) {
     maxBuffer: 100 * 1024 * 1024,
     timeout: 8 * MINUTES,
   });
-  if (r.status !== 0) throw new Error(`${cmd} ${args.slice(0, 3).join(' ')} failed:\n${r.stderr}`);
+  if (r.status !== 0) {
+    throw new Error(
+      `${cmd} ${args.slice(0, 3).join(' ')} failed:\n${r.error?.message ?? r.stderr}`,
+    );
+  }
   return r.stdout;
 }
 
@@ -119,6 +123,9 @@ function review(pr) {
     throw new Error(
       `Check out the PR head first (gh pr checkout ${pr}). Codex reads the working tree.`,
     );
+  }
+  if (run('git', ['status', '--porcelain']).trim()) {
+    throw new Error('Commit or stash local changes first. Codex reads the working tree.');
   }
   const diff = run('gh', ['pr', 'diff', pr]);
   if (Buffer.byteLength(diff) > MAX_DIFF_BYTES) {
