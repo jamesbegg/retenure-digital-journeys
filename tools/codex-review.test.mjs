@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   answeredNotes,
+  buildPrompt,
   buildReview,
   parseDiff,
   reviewTag,
@@ -110,5 +111,16 @@ describe('reviewTag', () => {
   it('names the model, effort and PR for the banner', () => {
     assert.equal(reviewTag('gpt-6.2-sol', '69'), '6.2 Sol Medium | #69');
     assert.equal(reviewTag('gpt-6.1-terra', '7'), '6.1 Terra Medium | #7');
+  });
+});
+
+describe('buildPrompt', () => {
+  it('sends the PR number and context, and tells Codex how to read the diff itself', () => {
+    const meta = { title: 'Add x', body: 'Why x.', baseRefName: 'develop', comments: [] };
+    const prompt = buildPrompt('69', meta);
+    assert.match(prompt, /Pull request #69: Add x/);
+    assert.match(prompt, /Why x\./);
+    assert.match(prompt, /git diff origin\/develop\.\.\.HEAD/);
+    assert.doesNotMatch(prompt, /^diff --git/m);
   });
 });

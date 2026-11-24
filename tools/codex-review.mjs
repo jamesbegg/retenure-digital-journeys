@@ -6,7 +6,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const SOL = 'gpt-6.2-sol';
 const TERRA = 'gpt-6.1-terra';
-const MAX_DIFF_BYTES = 300_000;
 const SOL_CHANGED_LINES = 600;
 const MINUTES = 60_000;
 const EFFORT = 'medium';
@@ -23,7 +22,7 @@ const SOL_PATHS = [
 ];
 
 const PROMPT = `You are an independent reviewer of a pull request in this repository.
-Read AGENTS.md first for the rules, then review the diff below.
+Read AGENTS.md first for the rules, then review the pull request below.
 
 Review for correctness, tenant isolation, accessibility, component reuse (a forked or one-off component is a finding), state and error handling, privacy of client answers, and missing behavioural tests. Ignore style concerns that tooling already enforces.
 
@@ -110,6 +109,16 @@ export function buildReview(result, model, commentable, commit) {
   return { commit_id: commit, event: 'COMMENT', body, comments };
 }
 
+// The prompt carries the PR number and context only. Codex reads the diff itself.
+export function buildPrompt(pr, meta) {
+  return `${PROMPT}Pull request #${pr}: ${meta.title}
+
+${meta.body}
+
+${answeredNotes(meta.comments)}The working tree is the PR head. See the changes with: git diff origin/${meta.baseRefName}...HEAD
+`;
+}
+
 function run(cmd, args, input) {
   const r = spawnSync(cmd, args, {
     encoding: 'utf8',
@@ -126,7 +135,9 @@ function run(cmd, args, input) {
 }
 
 function review(pr) {
-  const meta = JSON.parse(run('gh', ['pr', 'view', pr, '--json', 'headRefOid,url,comments']));
+  const meta = JSON.parse(
+    run('gh', ['pr', 'view', pr, '--json', 'headRefOid,url,comments,title,body,baseRefName']),
+  );
   if (run('git', ['rev-parse', 'HEAD']).trim() !== meta.headRefOid) {
     throw new Error(
       `Check out the PR head first (gh pr checkout ${pr}). Codex reads the working tree.`,
@@ -135,15 +146,15 @@ function review(pr) {
   if (run('git', ['status', '--porcelain']).trim()) {
     throw new Error('Commit or stash local changes first. Codex reads the working tree.');
   }
-  const diff = run('gh', ['pr', 'diff', pr]);
-  if (Buffer.byteLength(diff) > MAX_DIFF_BYTES) {
-    throw new Error('Diff is over 300 KB. Review it in smaller PRs.');
-  }
-  const files = run('gh', ['pr', 'diff', pr, '--name-only']).trim().split('\n');
+  const range = `origin/${meta.baseRefName}...HEAD`;
+  run('git', ['fetch', '-q', 'origin', meta.baseRefName]);
+  const flags = ['--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-prefix=b/'];
+  const diff = run('git', ['diff', ...flags, range]);
+  const files = run('git', ['diff', '--name-only', range]).trim().split('\n');
   const { commentable, changed } = parseDiff(diff);
   const model = routeModel(files, changed);
 
-  const prompt = `${PROMPT}${answeredNotes(meta.comments)}Diff:\n${diff}`;
+  const prompt = buildPrompt(pr, meta);
   const dir = mkdtempSync(join(tmpdir(), 'codex-review-'));
   const out = join(dir, 'result.json');
   const schema = join(dirname(fileURLToPath(import.meta.url)), 'codex-review.schema.json');
