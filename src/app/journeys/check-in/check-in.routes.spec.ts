@@ -1,5 +1,10 @@
 import { screen } from '@testing-library/angular';
-import { openPage, signIn, TEST_DATE_OF_BIRTH } from '../../testing/journey-harness';
+import {
+  answerEverything,
+  openPage,
+  signIn,
+  TEST_DATE_OF_BIRTH,
+} from '../../testing/journey-harness';
 import routes from './check-in.routes';
 
 const open = (url: string, hash?: string) => openPage(routes, url, hash);
@@ -50,5 +55,71 @@ describe('check-in routes', () => {
     expect(path()).toBe('/locked');
     screen.getByRole('heading', { level: 1, name: "We've paused this check-in" });
     expect(screen.queryByRole('group', { name: 'Your adviser' })).toBeNull();
+  });
+
+  it('keeps a section link opened before verifying, and lands on it once verified', async () => {
+    const { http, journey, path, settle } = await open('/check-in/section/sec-changes');
+    expect(path()).toBe('/start');
+    await signIn(http, journey);
+    await settle();
+    expect(path()).toBe('/check-in/section/sec-changes');
+    screen.getByRole('heading', { level: 1, name: 'What has changed' });
+  });
+
+  it('brings the client back to the same section, with their answers, after the session lapses', async () => {
+    const { http, journey, path, settle, harness } = await open('/start');
+    await signIn(http, journey);
+    await settle();
+    await harness.navigateByUrl('/check-in/section/sec-changes');
+    journey.setAnswers('sec-changes', { 'q-moved': { kind: 'yesNo', value: true } });
+
+    const renewed = journey.renew();
+    http.expectOne('/client/journey/session').flush(
+      {
+        error: 'UNAUTHORIZED',
+        statusCode: 401,
+        message: 'Gone',
+        requestId: 'r1',
+        reason: 'session_expired',
+      },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+    await renewed;
+    await settle();
+    expect(path()).toBe('/start');
+
+    await signIn(http, journey);
+    await settle();
+    expect(path()).toBe('/check-in/section/sec-changes');
+    expect(journey.answers()['sec-changes']).toEqual({ 'q-moved': { kind: 'yesNo', value: true } });
+  });
+
+  describe('Check your answers', () => {
+    async function openReview() {
+      const page = await open('/start');
+      await signIn(page.http, page.journey);
+      await page.settle();
+      return page;
+    }
+
+    it('goes to the first section with a required question unanswered, so Send never posts empty answers', async () => {
+      const { harness, path, journey } = await openReview();
+      await harness.navigateByUrl('/check-in/review');
+      expect(path()).toBe('/check-in/section/sec-about-you');
+
+      journey.setAnswers('sec-about-you', {
+        'q-email': { kind: 'yesNo', value: true },
+        'q-tom-dob': { kind: 'date', value: '1978-03-14' },
+      });
+      await harness.navigateByUrl('/check-in/review');
+      expect(path()).toBe('/check-in/section/sec-changes');
+    });
+
+    it('opens once every required question is answered', async () => {
+      const { harness, path, journey } = await openReview();
+      answerEverything(journey);
+      await harness.navigateByUrl('/check-in/review');
+      expect(path()).toBe('/check-in/review');
+    });
   });
 });

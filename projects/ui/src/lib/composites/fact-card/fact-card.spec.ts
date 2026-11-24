@@ -220,6 +220,27 @@ describe('FactCard (summary)', () => {
     expect(within(region).queryByRole('textbox')).toBeNull();
   });
 
+  it('hides Make a change when changing is not allowed, for the rows alone', async () => {
+    await render(
+      `<ret-fact-card variant="summary" heading="Your goals" [facts]="facts" ${copy}
+        [changeable]="false" />`,
+      { imports: [FactCard], componentProperties: { facts } },
+    );
+    const region = screen.getByRole('region', { name: 'Your goals' });
+    within(region).getByText('£48,000');
+    expect(within(region).queryByRole('button')).toBeNull();
+  });
+
+  it('with no facts shows the heading and Make a change, and no empty list', async () => {
+    await render(
+      `<ret-fact-card variant="summary" heading="Your goals" [facts]="facts" ${copy} />`,
+      { imports: [FactCard], componentProperties: { facts: [] } },
+    );
+    const region = screen.getByRole('region', { name: 'Your goals' });
+    expect(region.querySelector('dl')).toBeNull();
+    within(region).getByRole('button', { name: 'Make a change' });
+  });
+
   it('shows a saved note under the rows with the note label', async () => {
     await render(
       `<ret-fact-card variant="summary" heading="Your goals" [facts]="facts" ${copy}

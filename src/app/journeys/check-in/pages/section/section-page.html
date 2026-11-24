@@ -1,0 +1,33 @@
+@if (section(); as section) {
+  @if (open(); as journey) {
+    <ret-check-in-frame
+      [heading]="section.title"
+      [progress]="progress()"
+      [backable]="true"
+      [withContact]="true"
+      (back)="back()"
+    >
+      @for (message of problems(); track $index) {
+        <ret-notice tone="danger" live="assertive" [body]="message" />
+      }
+      @if (section.intro) {
+        <p>{{ section.intro }}</p>
+      }
+      <ret-question-renderer
+        [section]="section"
+        [copy]="journey.journey.copy"
+        [answers]="answers()"
+        (answersChange)="save($event)"
+        (complete)="complete.set($event)"
+      />
+      @if (complete()) {
+        <ret-button
+          slot="actions"
+          icon="arrow-right"
+          [label]="journey.journey.copy.continue"
+          (pressed)="next()"
+        />
+      }
+    </ret-check-in-frame>
+  }
+}

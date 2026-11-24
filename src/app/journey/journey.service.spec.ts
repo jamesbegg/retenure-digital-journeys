@@ -611,6 +611,63 @@ describe('JourneyService', () => {
       expect(service.submitProblem()).toBe('network');
     });
 
+    it('refuses an edit while the send is pending, so the retry sends the first payload', async () => {
+      const service = await ready();
+      let sent = service.submit();
+      expect(service.answersLocked()).toBe(true);
+      service.setAnswers('sec-changes', { 'q-moved': { kind: 'yesNo', value: false } });
+      const first = await answer('/client/journey/submission', 'Bad gateway', 502);
+      await sent;
+      expect(service.answers()['sec-changes']).toEqual({ 'q-moved': yes });
+      sent = service.submit();
+      const retry = await answer('/client/journey/submission', 'Bad gateway', 502);
+      await sent;
+      expect(retry.body).toEqual(first.body);
+    });
+
+    it('keeps the payload frozen after a session lapse mid-send, until the outcome is known', async () => {
+      const service = await ready();
+      let sent = service.submit();
+      const first = await answer('/client/journey/submission', 'Forbidden', 403);
+      await sent;
+      expect(service.stage()).toBe('verify');
+      await signIn(service);
+      expect(service.answersLocked()).toBe(true);
+      service.setAnswers('sec-changes', { 'q-moved': { kind: 'yesNo', value: false } });
+      sent = service.submit();
+      const retry = await answer('/client/journey/submission', {
+        schemaVersion: 1,
+        submissionId: 'x',
+        submittedAt: NOW.toISOString(),
+      });
+      await sent;
+      expect(retry.body).toEqual(first.body);
+      expect(service.answersLocked()).toBe(false);
+    });
+
+    it('unlocks the answers when the backend refuses them, and the next send has a new id', async () => {
+      const service = await ready();
+      let sent = service.submit();
+      const first = await answer(
+        '/client/journey/submission',
+        apiError(400, 'invalid_submission', {
+          fieldErrors: [{ field: 'answers.q-moved', code: 'x', message: 'Check it' }],
+        }),
+        400,
+      );
+      await sent;
+      expect(service.answersLocked()).toBe(false);
+      service.setAnswers('sec-changes', { 'q-moved': { kind: 'yesNo', value: false } });
+      sent = service.submit();
+      const second = await answer('/client/journey/submission', 'Bad gateway', 502);
+      await sent;
+      const id = (body: unknown) => (body as { submissionId: string }).submissionId;
+      expect(id(second.body)).not.toBe(id(first.body));
+      expect(service.answers()['sec-changes']).toEqual({
+        'q-moved': { kind: 'yesNo', value: false },
+      });
+    });
+
     it('refuses edits while the outcome is unknown, and a landed send ends on done', async () => {
       const service = await ready();
       let sent = service.submit();

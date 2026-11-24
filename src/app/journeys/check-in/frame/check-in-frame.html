@@ -1,4 +1,4 @@
-<ret-journey-shell [heading]="heading()" [state]="state()">
+<ret-journey-shell [heading]="heading()" [state]="state()" [layout]="layout()">
   @if (firmName(); as name) {
     <ret-client-header
       slot="header"
@@ -9,6 +9,7 @@
       (back)="back.emit()"
     />
   }
+  <ng-content ngProjectAs="[slot=steps]" select="[slot=steps]" />
   <ng-content />
   <ng-content ngProjectAs="[slot=actions]" select="[slot=actions]" />
   @if (adviser(); as adviser) {

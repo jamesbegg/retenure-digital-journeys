@@ -32,6 +32,8 @@ export class FactCard implements ControlValueAccessor {
   readonly heading = input.required<string>();
   readonly facts = input.required<HeldFact[]>();
   readonly variant = input<FactCardVariant>('question');
+  // A summary offers Make a change unless this is false.
+  readonly changeable = input(true);
   readonly confirm = input.required<string>();
   readonly makeChange = input.required<string>();
   readonly confirmed = input.required<string>();

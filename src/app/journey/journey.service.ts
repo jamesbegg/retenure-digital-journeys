@@ -31,7 +31,6 @@ export class JourneyService {
   private readonly document = inject(DOCUMENT);
 
   private token: string | null = null;
-  private submissionId: string | null = null;
   private expiresAt = 0;
   private renewing = false;
   // Bumped on every verify, lapse and failure: a response from an earlier session is dropped.
@@ -55,6 +54,10 @@ export class JourneyService {
   readonly submitProblem = signal<SubmitProblem | null>(null);
   readonly fieldErrors = signal<Record<string, string>>({});
   readonly answers = signal<Record<string, SectionAnswers>>({});
+  // The payload of a send whose outcome is not known yet. A retry sends it as it is, under the same
+  // submissionId, and no answer can change until the backend has said what happened to it.
+  private readonly sent = signal<SubmissionBody | null>(null);
+  readonly answersLocked = computed(() => this.sent() !== null);
 
   readonly invalidSection = computed(() => {
     const [first] = Object.keys(this.fieldErrors());
@@ -156,9 +159,8 @@ export class JourneyService {
     }
   }
 
-  // Refused while a send may have landed: an edit would change the payload under its submissionId.
   setAnswers(sectionId: string, answers: SectionAnswers): void {
-    if (this.submitProblem() === 'network') return;
+    if (this.answersLocked()) return;
     this.answers.update((all) => ({ ...all, [sectionId]: answers }));
     void this.activity();
   }
@@ -170,9 +172,8 @@ export class JourneyService {
     this.busy.set(true);
     this.submitProblem.set(null);
     this.fieldErrors.set({});
-    this.submissionId ??= crypto.randomUUID();
-    const body: SubmissionBody = {
-      submissionId: this.submissionId,
+    const body: SubmissionBody = this.sent() ?? {
+      submissionId: crypto.randomUUID(),
       answers: journey.sections.flatMap((section) =>
         section.blocks.flatMap((block) => {
           const answer =
@@ -183,6 +184,7 @@ export class JourneyService {
         }),
       ),
     };
+    this.sent.set(body);
     try {
       parseSubmissionReceipt(await this.post('/client/journey/submission', body));
       if (epoch !== this.epoch) return;
@@ -264,7 +266,7 @@ export class JourneyService {
     if (result.status === 'expired') {
       this.discard();
       this.stage.set('expired');
-    } else if (result.submissionId === this.submissionId) {
+    } else if (result.submissionId === this.sent()?.submissionId) {
       this.doneName.set(null);
       this.clear();
       this.stage.set('done');
@@ -294,7 +296,7 @@ export class JourneyService {
         ),
       );
       this.submitProblem.set('invalid');
-      this.submissionId = null;
+      this.sent.set(null);
     } else if (reason === 'already_submitted' || reason === 'journey_expired') {
       await this.load();
     } else if (!reason && (status === 0 || status >= 500)) {
@@ -302,7 +304,7 @@ export class JourneyService {
     } else {
       if (reason === 'submission_mismatch') {
         console.error('submission_mismatch', {
-          submissionId: this.submissionId,
+          submissionId: this.sent()?.submissionId,
           journeyId: this.journeyId(),
         });
       }
@@ -340,12 +342,12 @@ export class JourneyService {
   private discard(): void {
     this.clear();
     this.journey.set(null);
-    this.submissionId = null;
     this.submitProblem.set(null);
     this.fieldErrors.set({});
   }
 
   private clear(): void {
+    this.sent.set(null);
     this.answers.set({});
     this.clearTimers();
   }

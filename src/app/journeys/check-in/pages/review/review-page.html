@@ -1,0 +1,44 @@
+@if (open(); as j) {
+  @let c = j.journey.copy;
+  <ret-check-in-frame
+    [heading]="c.checkAnswersTitle"
+    [progress]="progress()"
+    [backable]="changeable()"
+    [withContact]="true"
+    (back)="back()"
+  >
+    @if (failed()) {
+      <ret-notice
+        tone="danger"
+        live="assertive"
+        [heading]="copy.sendFailedHeading"
+        [body]="copy.sendFailedBody"
+      />
+    }
+    @for (card of cards(); track card.id) {
+      <ret-fact-card
+        variant="summary"
+        [changeable]="changeable()"
+        [heading]="card.title"
+        [facts]="card.facts"
+        [confirm]="c.confirm"
+        [makeChange]="c.makeChange"
+        [confirmed]="c.confirmed"
+        [cancel]="c.cancel"
+        [save]="c.save"
+        [factNote]="c.factNote"
+        [requiredMessage]="c.required"
+        [errorPrefix]="c.errorPrefix"
+        (changeRequested)="change(card.id)"
+      />
+    }
+    <ret-button
+      slot="actions"
+      icon="arrow-right"
+      [label]="sendLabel()"
+      [pending]="journey.busy()"
+      [pendingLabel]="c.submitting"
+      (pressed)="send()"
+    />
+  </ret-check-in-frame>
+}

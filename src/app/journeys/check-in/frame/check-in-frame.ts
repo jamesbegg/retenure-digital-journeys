@@ -1,5 +1,12 @@
 import { Component, computed, inject, input, output } from '@angular/core';
-import { AdviserContact, ClientHeader, JourneyShell, Modal, ShellState } from '@retenure/ui';
+import {
+  AdviserContact,
+  ClientHeader,
+  JourneyShell,
+  Modal,
+  ShellLayout,
+  ShellState,
+} from '@retenure/ui';
 import { JourneyService } from '../../../journey/journey.service';
 import { TenantService } from '../../../tenant/tenant.service';
 import { appCopy } from '../check-in-copy';
@@ -16,6 +23,7 @@ import { CheckInProgress } from '../../../interfaces/check-in';
 export class CheckInFrame {
   readonly heading = input.required<string>();
   readonly state = input<ShellState>('ready');
+  readonly layout = input<ShellLayout>('default');
   readonly progress = input<CheckInProgress>();
   readonly backable = input(false);
   readonly withContact = input(false);
