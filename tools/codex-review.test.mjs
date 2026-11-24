@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { answeredNotes, buildReview, parseDiff, routeModel, usageOf } from './codex-review.mjs';
+import {
+  answeredNotes,
+  buildReview,
+  parseDiff,
+  reviewTag,
+  routeModel,
+  usageOf,
+} from './codex-review.mjs';
 
 const DIFF = `diff --git a/src/app/a.ts b/src/app/a.ts
 --- a/src/app/a.ts
@@ -96,5 +103,12 @@ describe('usageOf', () => {
       '{"type":"turn.started"}\n{"type":"turn.completed","usage":{"input_tokens":10,"cached_input_tokens":4,"output_tokens":2}}\n';
     assert.equal(usageOf(events), '10 in (4 cached), 2 out');
     assert.equal(usageOf(''), 'usage unknown');
+  });
+});
+
+describe('reviewTag', () => {
+  it('names the model, effort and PR for the banner', () => {
+    assert.equal(reviewTag('gpt-6.2-sol', '69'), '6.2 Sol Medium | #69');
+    assert.equal(reviewTag('gpt-6.1-terra', '7'), '6.1 Terra Medium | #7');
   });
 });
