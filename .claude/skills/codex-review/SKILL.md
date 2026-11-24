@@ -19,7 +19,7 @@ The script owns the cost and safety limits. Do not call `codex exec` by hand for
 - **One model, chosen by the script.** `gpt-6.2-sol` when the PR touches tenancy, auth, verification, invitations, storage, interceptors, `src/app/api`, journey state, shared UI interfaces or tokens, `e2e/tenancy`, repo config, `tools/` or agent config, or changes over 600 lines. Otherwise `gpt-6.1-terra`. Both at medium reasoning. Do not override the model; change the routing in `tools/codex-review.mjs` and its test if it is wrong.
 - **The diff is in the prompt.** Codex reads other files only to confirm a finding. A diff over 300 KB is refused: split the PR.
 - **It posts one public PR review.** Findings on a changed line are inline comments. The rest are in the summary. The diff must contain only synthetic data.
-- **It prints its token use.** Report it in the verification summary.
+- **It prints a banner and its token use.** `[CODEX REVIEW STARTED | 6.2 Sol Medium | #69]` when it starts and `[CODEX REVIEW DONE | ...]` when it posts. Tell the user in your own message when you start a round and when it ends, using the same banner, and report the token use in the verification summary.
 
 ## The loop
 

@@ -9,6 +9,7 @@ const TERRA = 'gpt-6.1-terra';
 const MAX_DIFF_BYTES = 300_000;
 const SOL_CHANGED_LINES = 600;
 const MINUTES = 60_000;
+const EFFORT = 'medium';
 
 // Where a miss costs most: trust boundaries, shared contracts, and anything that runs the checks.
 const SOL_PATHS = [
@@ -53,6 +54,13 @@ export function usageOf(events) {
     : 'usage unknown';
 }
 
+// 'gpt-6.2-sol' becomes '6.2 Sol Medium | #69', for the banner that tells the user Codex is running.
+export function reviewTag(model, pr) {
+  const [version, name] = model.replace(/^gpt-/, '').split('-');
+  const title = (word) => word[0].toUpperCase() + word.slice(1);
+  return `${version} ${title(name)} ${title(EFFORT)} | #${pr}`;
+}
+
 export function routeModel(files, changedLines) {
   const sensitive = files.some((file) => SOL_PATHS.some((re) => re.test(file)));
   return sensitive || changedLines > SOL_CHANGED_LINES ? SOL : TERRA;
@@ -91,7 +99,7 @@ export function buildReview(result, model, commentable, commit) {
   const text = (f) => `**${f.severity}: ${f.title}**\n\n${f.body}`;
   const loose = result.findings.filter((f) => !anchored(f));
   const body = [
-    `**Codex review** (${model}, medium reasoning)`,
+    `**Codex review** (${model}, ${EFFORT} reasoning)`,
     result.summary,
     ...(result.findings.length ? [] : ['No findings.']),
     ...loose.map((f) => `${text(f)}\n\n\`${f.file}${f.line ? `:${f.line}` : ''}\``),
@@ -140,9 +148,20 @@ function review(pr) {
   const out = join(dir, 'result.json');
   const schema = join(dirname(fileURLToPath(import.meta.url)), 'codex-review.schema.json');
   // Read-only, one process, no helper agents, no user config (its desktop review settings post on their own).
+  const tag = reviewTag(model, pr);
+  console.log(`[CODEX REVIEW STARTED | ${tag}]`);
   const events = run(
     'codex',
-    ['exec', '-m', model, '-c', 'model_reasoning_effort="medium"', '-s', 'read-only', '--ephemeral']
+    [
+      'exec',
+      '-m',
+      model,
+      '-c',
+      `model_reasoning_effort="${EFFORT}"`,
+      '-s',
+      'read-only',
+      '--ephemeral',
+    ]
       .concat(['--ignore-user-config', '--disable', 'multi_agent', '--disable', 'multi_agent_v2'])
       .concat(['--output-schema', schema, '--json', '-o', out, '-']),
     prompt,
@@ -160,7 +179,7 @@ function review(pr) {
     JSON.stringify(body),
   );
   console.log(
-    `${model}: ${body.comments.length} inline comments, ${usageOf(events)}, posted on ${meta.url}`,
+    `[CODEX REVIEW DONE | ${tag}] ${body.comments.length} inline comments, ${usageOf(events)}, posted on ${meta.url}`,
   );
 }
 
