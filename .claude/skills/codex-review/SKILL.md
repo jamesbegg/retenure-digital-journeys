@@ -1,11 +1,15 @@
 ---
 name: codex-review
-description: Run the Codex review loop on a PR before it is marked ready or merged. Codex posts a public review, the parent triages it with a KISS filter, fixes what is real, and repeats until nothing survives triage. Use whenever a PR is ready for review or merge, and when the user asks for a Codex review.
+description: Run the Codex review loop on a non-trivial PR before it is marked ready or merged. Codex posts a public review, the parent triages it with a KISS filter, fixes what is real, and repeats until nothing survives triage. Use whenever a PR is ready for review or merge, and when the user asks for a Codex review.
 ---
 
 # Codex review loop
 
 Codex and the Claude reviewers catch different things, so every PR gets both before it is marked ready or merged. Claude Code runs this skill. Codex does not review its own work.
+
+## When to skip
+
+Skip the loop, and say so, when the PR is trivial: docs only, a copy of a tool from another repository, or under about 30 changed lines, and it touches no path the routing in `tools/codex-review.mjs` sends to Sol. Everything else gets the loop. One round costs 90-215k tokens on Sol.
 
 ## One round
 
