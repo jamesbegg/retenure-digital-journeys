@@ -145,4 +145,16 @@ describe('Button', () => {
     await userEvent.setup().click(button('Save'));
     expect(pressed).not.toHaveBeenCalled();
   });
+
+  it('submits a form elsewhere on the page through the form attribute', async () => {
+    const submitted = vi.fn((event: Event) => event.preventDefault());
+    const form = document.createElement('form');
+    form.id = 'ask';
+    form.addEventListener('submit', submitted);
+    document.body.append(form);
+    await render(Button, { inputs: { label: 'Send', type: 'submit', form: 'ask' } });
+    await userEvent.setup().click(button('Send'));
+    expect(submitted).toHaveBeenCalledTimes(1);
+    form.remove();
+  });
 });

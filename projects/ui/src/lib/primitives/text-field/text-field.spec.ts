@@ -199,6 +199,15 @@ describe('TextField', () => {
 });
 
 describe('TextField date', () => {
+  it('describes each of Day, Month and Year by the hint and the error, not only the group', async () => {
+    await renderField({ type: 'date', hint: 'For example, 27 3 1962', error: 'Enter a real date' });
+    for (const name of ['Day', 'Month', 'Year']) {
+      const text = description(screen.getByRole('textbox', { name }));
+      expect(text.some((t) => t?.includes('For example, 27 3 1962'))).toBe(true);
+      expect(text.some((t) => t?.includes('Enter a real date'))).toBe(true);
+    }
+  });
+
   async function renderDate() {
     const view = await renderField({ type: 'date' });
     const group = screen.getByRole('group', { name: 'Amount' });

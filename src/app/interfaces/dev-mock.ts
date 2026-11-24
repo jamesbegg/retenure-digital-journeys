@@ -3,10 +3,12 @@ export type MockScenario =
   | 'wrongDob'
   | 'locked'
   | 'linkReissued'
+  | 'linkRequested'
   | 'alreadyCompleted'
   | 'expired'
   | 'sessionExpired'
-  | 'lostSubmit';
+  | 'lostSubmit'
+  | 'serverError';
 
 export type MockFirm = 'hartwell' | 'northgate';
 

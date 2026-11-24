@@ -1,0 +1,10 @@
+<ret-check-in-frame [heading]="status().heading" [withContact]="withContact()">
+  @for (text of status().paragraphs; track $index) {
+    <p>{{ text }}</p>
+  }
+  @if (status().aside; as aside) {
+    <ret-card [heading]="aside.heading"
+      ><p>{{ aside.body }}</p></ret-card
+    >
+  }
+</ret-check-in-frame>

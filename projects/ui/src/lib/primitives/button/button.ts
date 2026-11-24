@@ -20,6 +20,8 @@ export class Button {
   readonly pending = input(false);
   readonly pendingLabel = input('Please wait');
   readonly describedBy = input<string>();
+  // The id of a form elsewhere on the page that a submit button belongs to.
+  readonly form = input<string>();
   readonly pressed = output<void>();
 
   protected press(event: MouseEvent) {

@@ -1,0 +1,38 @@
+<ret-journey-shell [heading]="heading()" [state]="state()">
+  @if (firmName(); as name) {
+    <ret-client-header
+      slot="header"
+      [firmName]="name"
+      [firmMark]="firmMark()"
+      [progress]="headerProgress()"
+      [backLabel]="backable() ? labels().back : undefined"
+      (back)="back.emit()"
+    />
+  }
+  <ng-content />
+  <ng-content ngProjectAs="[slot=actions]" select="[slot=actions]" />
+  @if (adviser(); as adviser) {
+    <ret-adviser-contact
+      slot="contact"
+      variant="compact"
+      [name]="adviser.name"
+      [initials]="initials(adviser.name)"
+      [email]="adviser.email"
+      [phone]="adviser.phone"
+      [contactLine]="labels().contactLine"
+      [emailLabel]="emailLabel()"
+      [label]="labels().adviserLabel"
+    />
+  }
+</ret-journey-shell>
+
+@if (copy(); as c) {
+  <ret-modal
+    [heading]="c.timeoutWarning"
+    [primaryLabel]="c.moreTime"
+    [closeLabel]="c.close"
+    [open]="journey.idleWarning()"
+    (openChange)="idleChanged($event)"
+    (primaryPressed)="moreTime()"
+  />
+}

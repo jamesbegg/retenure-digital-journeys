@@ -23,6 +23,7 @@
             [attr.autocomplete]="autocomplete() ? autocomplete() + '-' + part : null"
             [value]="date()[part]"
             [readOnly]="readonly()"
+            [attr.aria-describedby]="describedBy()"
             [attr.aria-invalid]="invalidParts().includes(part) || null"
             (input)="inputDate(part, $any($event.target).value)"
             (paste)="pasteDate($event)"

@@ -88,6 +88,7 @@ describe('dev mock', () => {
   it.each([
     ['locked', 403, 'verification_locked'],
     ['linkReissued', 409, 'link_reissued'],
+    ['linkRequested', 409, 'link_requested'],
   ])('answers verification for %s', async (scenario, status, reason) => {
     const failure = await fails(
       firstValueFrom(
@@ -121,6 +122,34 @@ describe('dev mock', () => {
       expect(result.status).not.toBe('open');
       expect(JSON.stringify(result)).toContain('northgate.example');
       expect(JSON.stringify(result)).not.toContain('hartwell');
+    },
+  );
+
+  it('refuses the tenant in serverError, so no firm is named', async () => {
+    const failure = await fails(firstValueFrom(mock('?mock=serverError').get('/client/tenant')));
+    expect(failure?.status).toBe(500);
+  });
+
+  it.each(['hartwell', 'northgate'])(
+    'names the same adviser in the open, expired and submitted responses for %s',
+    async (firm) => {
+      const adviserOf = async (scenario: string) => {
+        TestBed.resetTestingModule();
+        const http = mock(`?mock=${scenario}&firm=${firm}`);
+        const body = await firstValueFrom(
+          http.post('/client/verification', { dateOfBirth: '1983-04-17' }),
+        );
+        const result = parseVerificationResponse(body);
+        if (result.status !== 'open') return result.adviser;
+        return (
+          parseJourneyResponse(await firstValueFrom(http.get('/client/journey'))) as {
+            adviser: unknown;
+          }
+        ).adviser;
+      };
+      const open = await adviserOf('happy');
+      expect(await adviserOf('expired')).toEqual(open);
+      expect(await adviserOf('alreadyCompleted')).toEqual(open);
     },
   );
 

@@ -28,10 +28,12 @@ const scenarios: readonly MockScenario[] = [
   'wrongDob',
   'locked',
   'linkReissued',
+  'linkRequested',
   'alreadyCompleted',
   'expired',
   'sessionExpired',
   'lostSubmit',
+  'serverError',
 ];
 
 function reply(body: unknown): Observable<HttpEvent<unknown>> {
@@ -70,6 +72,7 @@ export function createDevMock(search: string, hostname: string): HttpInterceptor
   const expired = {
     ...(northgate ? northgateExpiredJourney : hartwellExpiredJourney),
     journeyId: open.journey.id,
+    adviser: open.adviser,
   };
   const submittedBase = northgate ? northgateSubmittedJourney : hartwellSubmittedJourney;
   const expiresAt = () => new Date(Date.now() + 30 * 60_000).toISOString();
@@ -79,6 +82,7 @@ export function createDevMock(search: string, hostname: string): HttpInterceptor
   const submitted = () => ({
     ...submittedBase,
     journeyId: open.journey.id,
+    adviser: open.adviser,
     ...(submissionId && { submissionId }),
   });
 
@@ -87,12 +91,14 @@ export function createDevMock(search: string, hostname: string): HttpInterceptor
     if (!path.startsWith('/client/')) return next(request);
     const log = (message: string) => console.info(`[${DEV_MOCK_MARKER}] ${message}`);
 
-    if (path === '/client/tenant') return reply(tenant);
+    // The tenant cannot be loaded, so the generic error page shows with no firm on it.
+    if (path === '/client/tenant') return scenario === 'serverError' ? refuse(500) : reply(tenant);
 
     if (path === '/client/verification') {
       const body = request.body as MockVerificationBody;
       if (scenario === 'locked') return refuse(403, 'verification_locked');
       if (scenario === 'linkReissued') return refuse(409, 'link_reissued');
+      if (scenario === 'linkRequested') return refuse(409, 'link_requested');
       if (scenario === 'wrongDob' && body.dateOfBirth !== TEST_DATE_OF_BIRTH) {
         return refuse(401, 'verification_failed');
       }

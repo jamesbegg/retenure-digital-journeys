@@ -53,7 +53,7 @@
 @container (min-width: 48rem) {
   .bar {
     min-block-size: 4.5rem;
-    padding-inline: max(var(--ret-space-6), calc((100% - 72rem) / 2));
+    padding-inline: max(var(--ret-space-6), calc((100% - var(--ret-measure)) / 2));
   }
 
   .with-progress {
