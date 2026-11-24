@@ -17,7 +17,7 @@ The script owns the cost and safety limits. Do not call `codex exec` by hand for
 
 - **One process.** One `codex exec`, read-only, `--ephemeral`, multi-agent features disabled, 8 minute timeout. It never spawns helpers.
 - **One model, chosen by the script.** `gpt-6.2-sol` when the PR touches tenancy, auth, verification, invitations, storage, interceptors, `src/app/api`, journey state, shared UI interfaces or tokens, `e2e/tenancy`, repo config, `tools/` or agent config, or changes over 600 lines. Otherwise `gpt-6.1-terra`. Both at medium reasoning. Do not override the model; change the routing in `tools/codex-review.mjs` and its test if it is wrong.
-- **The prompt is the PR number and context, not the diff.** It carries the title, description and your earlier answers. Codex runs `git diff origin/<base>...HEAD` itself, so there is no size limit.
+- **The prompt is the PR number and context, not the diff.** It carries the title, description and your earlier answers. Codex runs `git diff origin/<base>...HEAD` itself, so the old 300 KB limit is gone.
 - **It posts one public PR review.** Findings on a changed line are inline comments. The rest are in the summary. The diff must contain only synthetic data.
 - **It prints a banner and its token use.** `[CODEX REVIEW STARTED | 6.2 Sol Medium | #69]` when it starts and `[CODEX REVIEW DONE | ...]` when it posts. Tell the user in your own message when you start a round and when it ends, using the same banner, and report the token use in the verification summary.
 

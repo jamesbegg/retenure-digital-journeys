@@ -147,7 +147,12 @@ function review(pr) {
     throw new Error('Commit or stash local changes first. Codex reads the working tree.');
   }
   const range = `origin/${meta.baseRefName}...HEAD`;
-  run('git', ['fetch', '-q', 'origin', meta.baseRefName]);
+  run('git', [
+    'fetch',
+    '-q',
+    'origin',
+    `+refs/heads/${meta.baseRefName}:refs/remotes/origin/${meta.baseRefName}`,
+  ]);
   const flags = ['--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-prefix=b/'];
   const diff = run('git', ['diff', ...flags, range]);
   const files = run('git', ['diff', '--name-only', range]).trim().split('\n');
