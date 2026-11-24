@@ -2,7 +2,7 @@ const tokensOnly = 'Colours live in projects/ui/src/lib/tokens. Use a var(--ret-
 
 export default {
   ignoreDisables: true,
-  ignoreFiles: ['dist/**', 'out-tsc/**', '.angular/**', 'playwright-report/**'],
+  ignoreFiles: ['dist/**', 'out-tsc/**', '.angular/**', 'playwright-report/**', '.claude/**'],
   extends: ['stylelint-config-standard-scss'],
   rules: {
     'custom-property-empty-line-before': null,
