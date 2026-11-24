@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "findings"],
+  "properties": {
+    "summary": { "type": "string" },
+    "findings": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "line", "severity", "title", "body"],
+        "properties": {
+          "file": { "type": "string" },
+          "line": { "type": "integer" },
+          "severity": { "enum": ["blocker", "major", "minor"] },
+          "title": { "type": "string" },
+          "body": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -14,6 +14,7 @@ These are the role definitions for this repository's multi-agent workflow. `AGEN
 | `security-reviewer` | Opus | `security_reviewer`, `gpt-6-sol` high |
 | `accessibility-reviewer` | Opus | `accessibility_reviewer`, `gpt-6-sol` high |
 | `plan-reviewer` | Opus | `plan_reviewer`, `gpt-6-sol` high |
+| PR review (`codex-review` skill) | not an agent | `gpt-6.2-sol` medium for trust boundaries, shared contracts and large diffs, else `gpt-6.1-terra` medium |
 | Feature-contract draft | the parent | plan-only `gpt-6-sol` medium subagent |
 
 - **Sonnet**: `mapper`, `implementer`, `test-reviewer`. Bounded, well-specified work.

@@ -81,8 +81,9 @@ For non-trivial features, cross-cutting refactors, unfamiliar failures or securi
 3. For UI work, pass the design gate below.
 4. Have `plan-reviewer` challenge the exact draft before implementation. The parent resolves findings, finalises the contract and remains the architectural authority.
 5. Delegate only disjoint implementation units to `implementer` agents. Sequence work that touches shared components, tokens or interfaces.
-6. Run `reviewer`, `test-reviewer`, `accessibility-reviewer` for any rendered change, and `security-reviewer` when a trust boundary is affected, in parallel after integration.
+6. Run `reviewer`, `test-reviewer`, `accessibility-reviewer` for any rendered change, and `security-reviewer` when a trust boundary is affected, in parallel after integration. 
 7. Synthesise findings, reject unsupported suggestions, fix confirmed issues, and invoke `verify-change` before completion.
+8. When a PR is ready for review or merge, run the `codex-review` loop: Codex posts a public review, you triage it with the KISS filter, fix what is real and repeat until nothing survives triage, at most three rounds.
 
 For small local changes that do not need a concrete plan, the parent handles the work directly. The primary agent owns architecture, integration, conflict resolution and the final answer.
 
@@ -189,3 +190,4 @@ Each rule pairs with what enforces it. When the user corrects an agent, fix the 
 | Prefer positional arguments over an options object for one or two flags. | judgment |
 | Copy the nearest existing analogue. Ask before adding a new abstraction. | judgment |
 | When the user is reviewing a plan, resolve findings and wait for an explicit go before building. | judgment |
+| Every PR gets the `codex-review` loop before it is marked ready or merged. Triage each Codex finding against the code and the KISS rule; never accept one because Codex raised it. | judgment (`codex-review` skill, `tools/codex-review.mjs`) |
