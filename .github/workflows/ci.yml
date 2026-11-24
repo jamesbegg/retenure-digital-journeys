@@ -3,8 +3,10 @@ name: CI
 permissions:
   contents: read
 
-# Runs only by hand. Lanes verify locally before pushing, which saves Actions minutes.
+# Runs on merges to develop and by hand, not on pull requests. Lanes verify locally before pushing.
 on:
+  push:
+    branches: [develop]
   workflow_dispatch:
 
 jobs:
