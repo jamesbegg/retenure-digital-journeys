@@ -166,4 +166,12 @@ describe('summariseAnswers', () => {
       /yn/,
     );
   });
+
+  it('names only the question and the kind when an answer cannot be shown, never what the client wrote', () => {
+    const unknown = { kind: 'essay', value: 'My private words' } as unknown as AnswerValue;
+    expect(() => summariseAnswers(section, { yn: unknown }, copy)).toThrow(
+      'Question yn has an answer of unknown kind essay',
+    );
+    expect(() => summariseAnswers(section, { yn: unknown }, copy)).not.toThrow(/private/);
+  });
 });

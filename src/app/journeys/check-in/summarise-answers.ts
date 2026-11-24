@@ -66,8 +66,11 @@ function describe(question: RenderableQuestion, answer: AnswerValue, copy: Journ
         `Question ${question.id} has an answer of kind ${answer.kind}, which cannot be shown`,
       );
     default: {
+      // Only the kind: the answer itself is the client's and stays out of the browser log.
       const unreachable: never = answer;
-      throw new Error(`Unhandled answer ${JSON.stringify(unreachable)}`);
+      throw new Error(
+        `Question ${question.id} has an answer of unknown kind ${(unreachable as AnswerValue).kind}`,
+      );
     }
   }
 }
