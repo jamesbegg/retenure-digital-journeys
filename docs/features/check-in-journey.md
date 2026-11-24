@@ -14,7 +14,7 @@ Builds the client side of `docs/features/questions-engine.md` from the user's ap
    - `JourneyService` covering verification, load, session, answers in memory, and submit once.
 3. **Screens** (`src/app/journeys/check-in`):
    - verify, welcome, one route per section, Check your answers, done
-   - the calm pages: already completed, expired, generic error, urgent help
+   - the calm pages: already completed, expired, generic error
    - each in phone and desktop layouts, plus e2e
 
 **Non-goals:**
@@ -34,7 +34,6 @@ Builds the client side of `docs/features/questions-engine.md` from the user's ap
 **Every screen:**
 - The header shows Back and progress. Progress is centred on desktop, and there's no firm name on section screens.
 - The adviser contact line ("Rather talk it through? Email me and we'll arrange a call.") sits under the content.
-- The link "Something urgent or worrying you?" goes to the urgent help page (C9).
 
 **Section (C2 to C5):**
 - The `h1` is the section title.
@@ -56,7 +55,7 @@ Builds the client side of `docs/features/questions-engine.md` from the user's ap
 - "Make a change" at the bottom of each card goes back to that section.
 - A "Send to <adviser>" button.
 
-**Done (C11):** a tick, "Thank you, <name>. We've received your answers.", "<Adviser> will be in touch.", then the contact line and the urgent link.
+**Done (C11):** a tick, "Thank you, <name>. We've received your answers.", "<Adviser> will be in touch.", then the contact line.
 
 **Already completed (C12):** "This check-in has already been completed. It was sent to <adviser> on <date>." Then "Wasn't you? If you didn't send these answers, contact <adviser> straight away.", and the adviser contact.
 
@@ -116,7 +115,7 @@ A0 lands first. A and B branch from it and share no files.
 
 ## Copy
 
-- **After the journey loads, all UI text comes from `JourneyCopy`** on the wire. It gains `confirm`, `makeChange`, `confirmed`, `cancel`, `save`, `factNote` ("Anything I should know?"), `contactLine`, `urgentLink`, `sendTo` ("Send to {adviser}"), `doneTitle` ("Thank you, {name}. …"), `doneBody`, `close`, `emailAdviser`, `adviserLabel`, `progressValue` and `moneyUnreadable`. This is agreed with the backend in the same work.
+- **After the journey loads, all UI text comes from `JourneyCopy`** on the wire. It gains `confirm`, `makeChange`, `confirmed`, `cancel`, `save`, `factNote` ("Anything I should know?"), `contactLine`, `sendTo` ("Send to {adviser}"), `doneTitle` ("Thank you, {name}. …"), `doneBody`, `close`, `emailAdviser`, `adviserLabel`, `progressValue` and `moneyUnreadable`. This is agreed with the backend in the same work.
 - **Pages without a journey's copy use app-owned English** in one constants file: verify, the link-problem page, the locked page, the generic error page, already completed, expired, and Done reached from a receipt-only response. Those responses carry no `JourneyCopy`. Verify, link-problem, locked and error have no adviser data, so they leave out the adviser line and say "contact your adviser". Expired and already completed take the adviser from their response.
 - **The respondent, not the lead.** Done fills `{name}` from the member named by `client.respondentId`, which may be a partner. The client never uses `client.lead` for this. `respondentId` is optional on the wire until backend U5b adds it, and becomes required then. Without it, Done uses the neutral "Thank you. We've received your answers."
 
@@ -175,6 +174,13 @@ A0 lands first. A and B branch from it and share no files.
   - FactCard and the `note` were agreed with the backend lane (adopted in its U3).
   - Unit A updates `questions-engine.md`'s release scope and `parsers.spec.ts`.
 - **A replan, recorded:** A0's six shared components. All are designed on the canvas's component library page, which satisfies the design gate.
+- **A replan, recorded (wave 2):** one more shared piece for the screens, designed on the canvas.
+  - `Steps`, a composite: a numbered list with the states done, current and todo, and labels and meta from inputs. The welcome screen lists the sections with it.
+  - Urgent help removed (user decision, 2026-11-23). It was to use a `Modal` bottom sheet, so `Modal` gains no placement variant.
+
+## Rollout
+
+- The skeleton PR (#66) leaves the sections routes absent, so it must merge together with the flow PR (#67).
 
 ## Replanning triggers
 

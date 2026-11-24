@@ -35,3 +35,5 @@ export * from './lib/interfaces/fact-card';
 export * from './lib/composites/fact-card/fact-card';
 export * from './lib/interfaces/question-renderer';
 export * from './lib/composites/question-renderer/question-renderer';
+export * from './lib/interfaces/steps';
+export * from './lib/composites/steps/steps';

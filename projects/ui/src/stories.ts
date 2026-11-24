@@ -32,6 +32,7 @@ export const stories: Record<string, () => Promise<Type<unknown>>> = {
     import('./lib/composites/client-header/client-header.story').then((m) => m.ClientHeaderStory),
   modal: () => import('./lib/composites/modal/modal.story').then((m) => m.ModalStory),
   notice: () => import('./lib/composites/notice/notice.story').then((m) => m.NoticeStory),
+  steps: () => import('./lib/composites/steps/steps.story').then((m) => m.StepsStory),
   'progress-bar': () =>
     import('./lib/primitives/progress-bar/progress-bar.story').then((m) => m.ProgressBarStory),
 };

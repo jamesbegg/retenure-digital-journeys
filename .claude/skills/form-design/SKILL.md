@@ -67,7 +67,7 @@ A summary shows the form the way the client experiences it, so whoever reads it 
 
 - **Same structure as the form**: the sections in order, each question worded exactly as the client sees it.
 - **Client's Check your answers** (canvas C10, the user's direction): one card per section, with the same subtle shadow as every other card. The section title sits inside the card. Each question and its answer is a row with a thin divider: question left and answer right on desktop, stacked on a phone, as on the held-facts card (C5). No alternating row colours. "Make a change" sits at the bottom of the card and goes back to that section; there is no Change link above the card.
-- **Done screen**: a short confirmation ("We've received your answers. Helen will be in touch."), then the same adviser line and urgent link as every other screen. No next-steps list, no copy email, nothing to add after sending.
+- **Done screen**: a short confirmation ("We've received your answers. Helen will be in touch."), then the same adviser line as every other screen. No next-steps list, no copy email, nothing to add after sending.
 - **Adviser's approval view (studio)**, as the user designed it (canvas row 6):
   - Title, then the household's names in gold.
   - One short summary of the year (italic, on a dark surface) with a link to last year's suitability review. This is the only place the story is told.

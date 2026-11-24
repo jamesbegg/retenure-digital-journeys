@@ -36,7 +36,6 @@ const copy: JourneyCopy = {
   save: 'Save',
   factNote: 'Anything I should know?',
   contactLine: 'contact',
-  urgentLink: 'urgent',
   sendTo: 'Send to {adviser}',
   doneTitle: 'Done',
   doneBody: 'Done',

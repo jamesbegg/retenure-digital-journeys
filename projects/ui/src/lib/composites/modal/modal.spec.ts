@@ -42,6 +42,7 @@ async function renderModal(attrs = '', componentProperties: Record<string, unkno
 }
 
 const leave = 'secondaryLabel="Leave"';
+const heading = () => screen.getByRole('heading', { name: 'Do you need more time?' });
 const dialog = () => screen.getByRole('dialog', { hidden: true });
 
 describe('Modal', () => {
@@ -59,27 +60,27 @@ describe('Modal', () => {
     expect(open.textContent).toContain('You have been inactive.');
   });
 
-  it('moves focus to the primary action, then restores it to the opener on close', async () => {
+  it('moves focus to the heading, then restores it to the opener on close', async () => {
     const { set } = await renderModal(`${leave} [(open)]="open"`);
     const opener = screen.getByRole('button', { name: 'Open' });
     opener.focus();
     await set(true);
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'I need more time' }));
+    expect(document.activeElement).toBe(heading());
     await set(false);
     expect(document.activeElement).toBe(opener);
   });
 
-  it('puts focus on the safe action for the danger tone', async () => {
+  it('puts focus on the heading for the danger tone too, so no action fires by accident', async () => {
     const { set } = await renderModal(`${leave} tone="danger" [(open)]="open"`);
     await set(true);
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Leave' }));
+    expect(document.activeElement).toBe(heading());
   });
 
   it('works with only a primary action, even for the danger tone', async () => {
     const { set } = await renderModal('tone="danger" [(open)]="open"');
     await set(true);
     expect(screen.queryByRole('button', { name: 'Leave' })).toBeNull();
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'I need more time' }));
+    expect(document.activeElement).toBe(heading());
   });
 
   it('can be opened, closed and opened again', async () => {
@@ -89,7 +90,7 @@ describe('Modal', () => {
       opener.focus();
       await set(true);
       screen.getByRole('dialog', { name: 'Do you need more time?' });
-      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'I need more time' }));
+      expect(document.activeElement).toBe(heading());
       await set(false);
       expect(screen.queryByRole('dialog')).toBeNull();
       expect(document.activeElement).toBe(opener);
@@ -145,5 +146,13 @@ describe('Modal', () => {
     expect(primary).toHaveBeenCalledTimes(1);
     expect(secondary).toHaveBeenCalledTimes(1);
     screen.getByRole('dialog');
+  });
+
+  it('describes the dialog by its body, so the body is read out on open', async () => {
+    const { set } = await renderModal('[(open)]="open"');
+    await set(true);
+    const body = screen.getByText('You have been inactive.').parentElement!;
+    expect(dialog().getAttribute('aria-describedby')).toBe(body.id);
+    expect(body.id).not.toBe('');
   });
 });
